@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Classroom Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { border-color: #4caf50; background-color: #e8f5e8; }
+        .error { border-color: #f44336; background-color: #ffebee; }
+        button { background: #2196f3; color: white; border: none; padding: 10px 20px; margin: 5px; cursor: pointer; }
+        .log { background: #f8f9fa; border: 1px solid #dee2e6; padding: 10px; margin: 10px 0; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h1>Simple Classroom Test</h1>
+    
+    <div class="test-section">
+        <h3>Test Controls</h3>
+        <button onclick="testBasicFunctionality()">Test Basic Functionality</button>
+        <button onclick="testClassroomJoin()">Test Classroom Join</button>
+        <button onclick="clearData()">Clear Data</button>
+    </div>
+    
+    <div class="test-section">
+        <h3>Results</h3>
+        <div id="results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Log</h3>
+        <div id="log" class="log"></div>
+    </div>
+
+    <script>
+        // Simple mock database for testing
+        class SimpleDatabase {
+            constructor() {
+                this.STORAGE_KEY = 'mathtutor_data';
+            }
+
+            generateId() {
+                return 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            }
+
+            getUsers() {
+                try {
+                    const data = localStorage.getItem(this.STORAGE_KEY);
+                    return data ? JSON.parse(data).users || [] : [];
+                } catch (e) {
+                    return [];
+                }
+            }
+
+            saveUsers(users) {
+                try {
+                    const data = this.loadData();
+                    data.users = users;
+                    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
+                } catch (e) {
+                    console.error('Failed to save users:', e);
+                }
+            }
+
+            loadData() {
+                try {
+                    const data = localStorage.getItem(this.STORAGE_KEY);
+                    return data ? JSON.parse(data) : {};
+                } catch (e) {
+                    return {};
+                }
+            }
+
+            getUserById(userId) {
+                try {
+                    const users = this.getUsers();
+                    const user = users.find(u => u.id === userId);
+                    if (user) {
+                        // Ensure the user object has the required properties
+                        const userWithDefaults = {
+                            ...user,
+                            createdAt: user.createdAt || new Date().toISOString(),
+                            lastLogin: user.lastLogin || new Date().toISOString(),
+                            cadetAvatar: user.cadetAvatar || 'king-sadboi'
+                        };
+                        return this.parseUser(userWithDefaults);
+                    }
+                    return null;
+                } catch (error) {
+                    console.error('Error getting user by ID:', error);
+                    return null;
+                }
+            }
+
+            parseUser(u) {
+                try {
+                    // Handle cases where dates might be strings, Date objects, or missing
+                    const createdAt = u.createdAt ? new Date(u.createdAt) : new Date();
+                    const lastLogin = u.lastLogin ? new Date(u.lastLogin) : new Date();
+                    
+                    // Validate dates
+                    if (isNaN(createdAt.getTime())) {
+                        createdAt.setTime(Date.now());
+                    }
+                    if (isNaN(lastLogin.getTime())) {
+                        lastLogin.setTime(Date.now());
+                    }
+                    
+                    return { 
+                        ...u, 
+                        createdAt: createdAt, 
+                        lastLogin: lastLogin,
+                        cadetAvatar: u.cadetAvatar || 'king-sadboi'
+                    };
+                } catch (error) {
+                    console.error('Error parsing user:', error);
+                    // Return user with safe defaults
+                    return {
+                        ...u,
+                        createdAt: new Date(),
+                        lastLogin: new Date(),
+                        cadetAvatar: u.cadetAvatar || 'king-sadboi'
+                    };
+                }
+            }
+
+            async initializeSampleData() {
+                try {
+                    log('📝 Initializing sample data...');
+                    
+                    // Create sample teacher
+                    const teacherUser = {
+                        id: this.generateId(),
+                        username: 'demo_teacher',
+                        email: 'teacher@demo.local',
+                        password: 'demo123',
+                        role: 'teacher',
+                        createdAt: new Date().toISOString(),
+                        lastLogin: new Date().toISOString(),
+                        cadetAvatar: 'king-sadboi'
+                    };
+                    
+                    // Create sample student
+                    const studentUser = {
+                        id: this.generateId(),
+                        username: 'demo_student',
+                        email: 'student@demo.local',
+                        password: 'demo123',
+                        role: 'student',
+                        createdAt: new Date().toISOString(),
+                        lastLogin: new Date().toISOString(),
+                        cadetAvatar: 'king-sadboi'
+                    };
+                    
+                    // Save users
+                    const users = [teacherUser, studentUser];
+                    this.saveUsers(users);
+                    
+                    // Create sample classroom
+                    const classroom = {
+                        id: this.generateId(),
+                        name: 'Math Fundamentals 101',
+                        teacherId: teacherUser.id,
+                        joinCode: 'MATH101',
+                        createdAt: new Date().toISOString(),
+                        isActive: true,
+                        studentCount: 0
+                    };
+                    
+                    // Save classroom
+                    const data = this.loadData();
+                    data.classrooms = [classroom];
+                    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
+                    
+                    log('✅ Sample data created successfully');
+                    log(`✅ Teacher: ${teacherUser.username} (${teacherUser.id})`);
+                    log(`✅ Student: ${studentUser.username} (${studentUser.id})`);
+                    log(`✅ Classroom: ${classroom.name} (${classroom.joinCode})`);
+                    
+                    return { teacherUser, studentUser, classroom };
+                } catch (error) {
+                    log(`❌ Failed to initialize sample data: ${error.message}`);
+                    throw error;
+                }
+            }
+
+            async joinClassroom(joinCode, studentId) {
+                try {
+                    log(`🎓 Attempting to join classroom with code: ${joinCode}`);
+                    
+                    // Get student
+                    const student = await this.getUserById(studentId);
+                    if (!student) {
+                        throw new Error('Student not found in database');
+                    }
+                    log(`✅ Found student: ${student.username}`);
+                    
+                    // Find classroom
+                    const data = this.loadData();
+                    const classrooms = data.classrooms || [];
+                    const classroom = classrooms.find(c => c.joinCode === joinCode && c.isActive);
+                    
+                    if (!classroom) {
+                        throw new Error(`Classroom with code ${joinCode} not found`);
+                    }
+                    log(`✅ Found classroom: ${classroom.name}`);
+                    
+                    // Get teacher
+                    const teacher = await this.getUserById(classroom.teacherId);
+                    if (!teacher) {
+                        throw new Error('Teacher not found for this classroom');
+                    }
+                    log(`✅ Found teacher: ${teacher.username}`);
+                    
+                    // Update student count
+                    classroom.studentCount = (classroom.studentCount || 0) + 1;
+                    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
+                    
+                    log(`✅ Successfully joined classroom! Student count: ${classroom.studentCount}`);
+                    
+                    return {
+                        ok: true,
+                        classroom: classroom,
+                        teacher: teacher
+                    };
+                } catch (error) {
+                    log(`❌ Failed to join classroom: ${error.message}`);
+                    throw error;
+                }
+            }
+        }
+
+        const db = new SimpleDatabase();
+
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+
+        function showResults(message, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `test-section ${type}`;
+            div.innerHTML = message;
+            resultsDiv.appendChild(div);
+        }
+
+        async function testBasicFunctionality() {
+            try {
+                log('🚀 Testing basic database functionality...');
+                
+                const sampleData = await db.initializeSampleData();
+                
+                // Test getting users
+                const users = db.getUsers();
+                log(`✅ Retrieved ${users.length} users`);
+                
+                // Test getting specific user
+                const student = await db.getUserById(sampleData.studentUser.id);
+                if (student) {
+                    log(`✅ Retrieved student: ${student.username} (${student.role})`);
+                } else {
+                    throw new Error('Failed to retrieve student');
+                }
+                
+                showResults('✅ Basic functionality test passed!', 'success');
+            } catch (error) {
+                showResults(`❌ Basic functionality test failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testClassroomJoin() {
+            try {
+                log('🎓 Testing classroom join...');
+                
+                // Get a student user
+                const users = db.getUsers();
+                const student = users.find(u => u.role === 'student');
+                
+                if (!student) {
+                    throw new Error('No student user found. Please run basic test first.');
+                }
+                
+                // Try to join classroom
+                const result = await db.joinClassroom('MATH101', student.id);
+                
+                if (result.ok) {
+                    showResults(`✅ Successfully joined classroom: ${result.classroom.name}`, 'success');
+                    log(`✅ Teacher: ${result.teacher.username}`);
+                    log(`✅ Student count: ${result.classroom.studentCount}`);
+                } else {
+                    throw new Error('Join failed');
+                }
+            } catch (error) {
+                showResults(`❌ Classroom join test failed: ${error.message}`, 'error');
+            }
+        }
+
+        function clearData() {
+            try {
+                localStorage.clear();
+                showResults('✅ All data cleared successfully.', 'success');
+                log('All localStorage data cleared');
+            } catch (error) {
+                showResults(`❌ Failed to clear data: ${error.message}`, 'error');
+            }
+        }
+
+        // Initialize
+        log('Simple Classroom Test initialized');
+        showResults('🚀 Ready to test! Click "Test Basic Functionality" to start.', 'info');
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solution Formatter Test</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e293b 0%, #7c3aed 50%, #1e293b 100%);
+            color: white;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid #475569;
+        }
+        .demo-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(51, 65, 85, 0.5);
+            border-radius: 8px;
+            border: 1px solid #64748b;
+        }
+        .header {
+            color: #60a5fa;
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .subheader {
+            color: #93c5fd;
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .math-block {
+            background: #475569;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #64748b;
+            margin: 8px 0;
+        }
+        .step-block {
+            background: rgba(59, 130, 246, 0.2);
+            padding: 12px;
+            border-left: 4px solid #3b82f6;
+            border-radius: 6px;
+            margin: 8px 0;
+        }
+        .verification-block {
+            background: rgba(34, 197, 94, 0.2);
+            padding: 8px;
+            border-left: 4px solid #22c55e;
+            border-radius: 6px;
+            margin: 4px 0;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+        .answer-block {
+            background: rgba(234, 179, 8, 0.2);
+            padding: 16px;
+            border: 2px solid #eab308;
+            border-radius: 8px;
+            margin: 12px 0;
+        }
+        .text-block {
+            color: #e2e8f0;
+            line-height: 1.6;
+            margin: 8px 0;
+        }
+        .katex {
+            font-size: 1.1em;
+        }
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .before, .after {
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .before {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid #ef4444;
+        }
+        .after {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid #22c55e;
+        }
+        .before-label, .after-label {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .before-label {
+            color: #f87171;
+        }
+        .after-label {
+            color: #4ade80;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="header">🎨 Solution Formatter Test</h1>
+        <p class="text-block">This page demonstrates how the solution formatter transforms raw solver output into beautiful, organized, and LaTeX-rendered content.</p>
+        
+        <div class="demo-section">
+            <h2 class="subheader">Sample Solution Output</h2>
+            
+            <div class="comparison">
+                <div class="before">
+                    <div class="before-label">❌ Raw Output</div>
+                    <div class="text-block" style="font-family: monospace; font-size: 0.8em; white-space: pre-wrap;">
+**Step-by-Step Solution with Teacher-Level Explanations:**
+
+---
+
+### **Raw Equation:**
+(x^2 - 4)/(x - 2) = x + 2
+*(We're solving for x in this fraction equation)*
+
+---
+
+### **Step 1: Find and Factor All Denominators**
+**TEACHER'S VOICE:**
+"Let's look carefully at all bottom parts (denominators):
+1. There is one fraction with x - 2 at the bottom
+2. Since x - 2 is already simple, we don't need to factor it further
+3. Any constant terms have an invisible denominator of 1"
+
+```
+INSTRUCTION: First, let's examine all the denominators in our equation - these are the bottom parts of our fractions. We have one simple denominator here that can't be factored further. Remember, we must also identify any x-values that would make this denominator zero, as those would make our equation undefined.
+x - 2  # Already in simplest form
+INSTRUCTION: Values that would break the math.
+x = 2 (because 5/0 is undefined)  # Never allowed
+• LCD: x - 2  # This is our magic cleaner for all fractions
+```
+
+---
+
+### **Step 2: Multiply Both Sides by LCD**
+**TEACHER'S VOICE:**
+"Now we multiply everything by our LCD to eliminate fractions"
+
+```
+(x^2 - 4)/(x - 2) * (x - 2) = (x + 2) * (x - 2)
+x^2 - 4 = (x + 2)(x - 2)
+```
+
+---
+
+### **Step 3: Expand and Simplify**
+**TEACHER'S VOICE:**
+"Let's expand the right side and see what we get"
+
+```
+x^2 - 4 = x^2 - 4
+```
+
+---
+
+### **Step 4: Analyze the Result**
+**TEACHER'S VOICE:**
+"This is interesting! Both sides are identical, which means..."
+
+```
+x^2 - 4 = x^2 - 4
+0 = 0
+```
+
+This equation is always true for any value of x, except x = 2 (which makes the denominator zero).
+
+---
+
+**Final Answer:**
+x = 2
+*(The solution checks out mathematically!)*
+                    </div>
+                </div>
+                
+                <div class="after">
+                    <div class="after-label">✅ Formatted Output</div>
+                    <div class="text-block">
+                        <div class="header">Step-by-Step Solution with Teacher-Level Explanations:</div>
+                        
+                        <div class="subheader">Raw Equation:</div>
+                        <div class="math-block">
+                            <span class="katex">\frac{x^2 - 4}{x - 2} = x + 2</span>
+                        </div>
+                        <div class="text-block">(We're solving for x in this fraction equation)</div>
+                        
+                        <div class="subheader">Step 1: Find and Factor All Denominators</div>
+                        <div class="text-block">
+                            "Let's look carefully at all bottom parts (denominators):<br>
+                            1. There is one fraction with x - 2 at the bottom<br>
+                            2. Since x - 2 is already simple, we don't need to factor it further<br>
+                            3. Any constant terms have an invisible denominator of 1"
+                        </div>
+                        
+                        <div class="step-block">
+                            <strong>Step:</strong><br>
+                            INSTRUCTION: First, let's examine all the denominators in our equation - these are the bottom parts of our fractions. We have one simple denominator here that can't be factored further. Remember, we must also identify any x-values that would make this denominator zero, as those would make our equation undefined.<br>
+                            x - 2  # Already in simplest form<br>
+                            INSTRUCTION: Values that would break the math.<br>
+                            x = 2 (because 5/0 is undefined)  # Never allowed<br>
+                            • LCD: x - 2  # This is our magic cleaner for all fractions
+                        </div>
+                        
+                        <div class="subheader">Step 2: Multiply Both Sides by LCD</div>
+                        <div class="text-block">
+                            "Now we multiply everything by our LCD to eliminate fractions"
+                        </div>
+                        
+                        <div class="math-block">
+                            <span class="katex">\frac{x^2 - 4}{x - 2} \cdot (x - 2) = (x + 2) \cdot (x - 2)</span><br>
+                            <span class="katex">x^2 - 4 = (x + 2)(x - 2)</span>
+                        </div>
+                        
+                        <div class="subheader">Step 3: Expand and Simplify</div>
+                        <div class="text-block">
+                            "Let's expand the right side and see what we get"
+                        </div>
+                        
+                        <div class="math-block">
+                            <span class="katex">x^2 - 4 = x^2 - 4</span>
+                        </div>
+                        
+                        <div class="subheader">Step 4: Analyze the Result</div>
+                        <div class="text-block">
+                            "This is interesting! Both sides are identical, which means..."
+                        </div>
+                        
+                        <div class="math-block">
+                            <span class="katex">x^2 - 4 = x^2 - 4</span><br>
+                            <span class="katex">0 = 0</span>
+                        </div>
+                        
+                        <div class="text-block">
+                            This equation is always true for any value of x, except x = 2 (which makes the denominator zero).
+                        </div>
+                        
+                        <div class="answer-block">
+                            <strong>Final Answer:</strong><br>
+                            <span class="katex">x = 2</span><br>
+                            (The solution checks out mathematically!)
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <h2 class="subheader">Key Features</h2>
+            <div class="text-block">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">
+                    <div style="background: rgba(59, 130, 246, 0.1); padding: 15px; border-radius: 8px; border: 1px solid #3b82f6;">
+                        <h3 style="color: #60a5fa; margin-bottom: 10px;">🎨 Visual Design</h3>
+                        <ul style="color: #e2e8f0; line-height: 1.6;">
+                            <li>Color-coded sections (blue, green, yellow)</li>
+                            <li>Modern gradients and borders</li>
+                            <li>Proper spacing and typography</li>
+                            <li>Visual hierarchy with headers</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="background: rgba(34, 197, 94, 0.1); padding: 15px; border-radius: 8px; border: 1px solid #22c55e;">
+                        <h3 style="color: #4ade80; margin-bottom: 10px;">📐 LaTeX Rendering</h3>
+                        <ul style="color: #e2e8f0; line-height: 1.6;">
+                            <li>Mathematical expressions in LaTeX</li>
+                            <li>Proper fraction rendering</li>
+                            <li>Equation formatting</li>
+                            <li>Fallback for complex expressions</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="background: rgba(234, 179, 8, 0.1); padding: 15px; border-radius: 8px; border: 1px solid #eab308;">
+                        <h3 style="color: #fbbf24; margin-bottom: 10px;">🧹 Content Cleaning</h3>
+                        <ul style="color: #e2e8f0; line-height: 1.6;">
+                            <li>Removed unnecessary characters</li>
+                            <li>Organized into clear sections</li>
+                            <li>Better text formatting</li>
+                            <li>Improved readability</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="background: rgba(168, 85, 247, 0.1); padding: 15px; border-radius: 8px; border: 1px solid #a855f7;">
+                        <h3 style="color: #c084fc; margin-bottom: 10px;">⚡ Performance</h3>
+                        <ul style="color: #e2e8f0; line-height: 1.6;">
+                            <li>Efficient parsing algorithm</li>
+                            <li>Smart content detection</li>
+                            <li>Optimized rendering</li>
+                            <li>Maintainable code structure</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <h2 class="subheader">How to Test</h2>
+            <div class="text-block">
+                <p>To see the formatted solution in action:</p>
+                <ol style="color: #e2e8f0; line-height: 1.6; margin-left: 20px;">
+                    <li>Navigate to <code style="background: rgba(51, 65, 85, 0.5); padding: 2px 6px; border-radius: 4px;">/drawing-solver</code></li>
+                    <li>Click on the "Manual Input" tab</li>
+                    <li>Enter an equation like: <code style="background: rgba(51, 65, 85, 0.5); padding: 2px 6px; border-radius: 4px;">Eq((x^2 - 4)/(x - 2), x + 2)</code></li>
+                    <li>Click "Solve Equation"</li>
+                    <li>Switch to the "Solution" tab to see the formatted output</li>
+                </ol>
+                
+                <div style="background: rgba(51, 65, 85, 0.5); padding: 15px; border-radius: 8px; margin-top: 15px;">
+                    <h4 style="color: #93c5fd; margin-bottom: 10px;">Note:</h4>
+                    <p style="color: #e2e8f0;">The solution formatter automatically converts mathematical expressions to LaTeX format and applies beautiful styling to make the solution easy to read and understand.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script>
+        // Auto-render LaTeX expressions
+        document.addEventListener('DOMContentLoaded', function() {
+            const mathElements = document.querySelectorAll('.katex');
+            mathElements.forEach(element => {
+                katex.render(element.textContent, element, {
+                    throwOnError: false,
+                    displayMode: true
+                });
+            });
+        });
+    </script>
+</body>
+</html>

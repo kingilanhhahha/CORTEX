@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCR Debug Test - Drawing Solver</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .section h2 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        canvas {
+            border: 2px dashed #ccc;
+            background: white;
+            cursor: crosshair;
+        }
+        .controls {
+            margin: 15px 0;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .result-box {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .error {
+            color: #dc3545;
+            background: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        .success {
+            color: #155724;
+            background: #d4edda;
+            border-color: #c3e6cb;
+        }
+        .warning {
+            color: #856404;
+            background: #fff3cd;
+            border-color: #ffeaa7;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .drawing-area {
+            text-align: center;
+        }
+        .api-status {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 OCR Debug Test - Drawing Solver</h1>
+    
+    <div class="api-status">
+        <strong>API Status:</strong> <span id="apiStatus">Checking...</span>
+        <button onclick="checkApiStatus()">🔄 Refresh Status</button>
+    </div>
+
+    <div class="container">
+        <!-- Drawing Section -->
+        <div class="section">
+            <h2>✏️ Drawing Area</h2>
+            <div class="drawing-area">
+                <canvas id="drawingCanvas" width="400" height="300"></canvas>
+                <div class="controls">
+                    <button onclick="clearCanvas()">🗑️ Clear</button>
+                    <button onclick="processDrawing()">⚡ Process Drawing</button>
+                    <button onclick="testOCR()">�� Test OCR</button>
+                    <button onclick="solveManually()" id="solveButton" disabled>🧮 Solve Manually</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="section">
+            <h2>📊 Results & Debug Info</h2>
+            
+            <h3>OCR Results</h3>
+            <div id="ocrResults" class="result-box">No OCR results yet...</div>
+            
+            <h3>Complete Solution</h3>
+            <div id="completeSolution" class="result-box">No solution yet...</div>
+            
+            <h3>API Response</h3>
+            <div id="apiResponse" class="result-box">No API response yet...</div>
+            
+            <h3>Debug Information</h3>
+            <div id="debugInfo" class="result-box">No debug info yet...</div>
+            
+            <h3>Expected vs Actual</h3>
+            <div id="comparison" class="result-box">No comparison yet...</div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('drawingCanvas');
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        // Drawing functionality
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+
+        function startDrawing(e) {
+            isDrawing = true;
+            [lastX, lastY] = [e.offsetX, e.offsetY];
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(e.offsetX, e.offsetY);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            [lastX, lastY] = [e.offsetX, e.offsetY];
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            clearResults();
+        }
+
+        function clearResults() {
+            document.getElementById('ocrResults').textContent = 'No OCR results yet...';
+            document.getElementById('completeSolution').textContent = 'No solution yet...';
+            document.getElementById('apiResponse').textContent = 'No API response yet...';
+            document.getElementById('debugInfo').textContent = 'No debug info yet...';
+            document.getElementById('comparison').textContent = 'No comparison yet...';
+            document.getElementById('solveButton').disabled = true;
+        }
+
+        function checkApiStatus() {
+            fetch('http://localhost:5001/api/health')
+                .then(response => response.json())
+                .then(data => {
+                    const status = document.getElementById('apiStatus');
+                    if (data.status === 'healthy') {
+                        status.innerHTML = '✅ Connected - OCR: ' + (data.ocr_available ? '✅' : '❌') + 
+                                        ', Solver: ' + (data.solver_available ? '✅' : '❌');
+                    } else {
+                        status.innerHTML = '❌ API Error';
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('apiStatus').innerHTML = '❌ Cannot connect to API (Port 5001)';
+                });
+        }
+
+        function processDrawing() {
+            const imageData = canvas.toDataURL('image/png');
+            const base64Data = imageData.split(',')[1];
+            
+            // Convert base64 to blob
+            const byteCharacters = atob(base64Data);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], {type: 'image/png'});
+            
+            // Create FormData and send
+            const formData = new FormData();
+            formData.append('image', blob, 'drawing.png');
+            
+            document.getElementById('ocrResults').textContent = 'Processing...';
+            
+            fetch('http://localhost:5001/api/ocr/process', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                displayResults(data);
+            })
+            .catch(error => {
+                document.getElementById('ocrResults').textContent = 'Error: ' + error.message;
+            });
+        }
+
+        function testOCR() {
+            const imageData = canvas.toDataURL('image/png');
+            const base64Data = imageData.split(',')[1];
+            
+            // Convert base64 to blob
+            const byteCharacters = atob(base64Data);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], {type: 'image/png'});
+            
+            // Create FormData and send
+            const formData = new FormData();
+            formData.append('image', blob, 'drawing.png');
+            
+            document.getElementById('debugInfo').textContent = 'Testing OCR...';
+            
+            fetch('http://localhost:5001/api/test_ocr', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                displayDebugInfo(data);
+            })
+            .catch(error => {
+                document.getElementById('debugInfo').textContent = 'Error: ' + error.message;
+            });
+        }
+
+        function displayResults(data) {
+            const ocrResults = document.getElementById('ocrResults');
+            const completeSolution = document.getElementById('completeSolution');
+            const apiResponse = document.getElementById('apiResponse');
+            const solveButton = document.getElementById('solveButton');
+            
+            if (data.success) {
+                ocrResults.innerHTML = `
+✅ OCR Success!
+📝 Raw LaTeX: ${data.latex_raw || 'N/A'}
+🧹 Cleaned LaTeX: ${data.latex_clean || 'N/A'}
+📊 Extracted Equation: ${data.equation || 'N/A'}
+🔄 Auto-Solved: ${data.auto_solved ? '✅ Yes' : '❌ No'}
+                `;
+                
+                // Enable solve button if equation is available
+                if (data.equation) {
+                    solveButton.disabled = false;
+                    solveButton.onclick = () => solveManually(data.equation);
+                } else {
+                    solveButton.disabled = true;
+                }
+                
+                // Display complete solution if available
+                if (data.solution) {
+                    completeSolution.innerHTML = `
+🧮 COMPLETE STEP-BY-STEP SOLUTION:
+📏 Solution Length: ${data.solution_length || 'N/A'} characters
+📝 Solution:
+${data.solution}
+                    `;
+                } else if (data.solve_error) {
+                    completeSolution.innerHTML = `
+❌ Solution Generation Failed:
+🔍 Error: ${data.solve_error}
+💡 You can still solve manually using the extracted equation
+                    `;
+                } else {
+                    completeSolution.innerHTML = `
+ℹ️ No solution generated
+💡 The OCR extracted an equation but no solution was created
+                    `;
+                }
+                
+                apiResponse.innerHTML = JSON.stringify(data, null, 2);
+                
+                // Show comparison
+                showComparison(data.equation);
+            } else {
+                ocrResults.innerHTML = `❌ OCR Failed: ${data.error || 'Unknown error'}`;
+                completeSolution.innerHTML = 'No solution available due to OCR failure';
+                solveButton.disabled = true;
+                apiResponse.innerHTML = JSON.stringify(data, null, 2);
+            }
+        }
+
+        function displayDebugInfo(data) {
+            const debugInfo = document.getElementById('debugInfo');
+            
+            if (data.success) {
+                debugInfo.innerHTML = `
+🔍 OCR Test Results:
+📊 Raw LaTeX: ${data.raw_latex || 'N/A'}
+🧹 Cleaned LaTeX: ${data.cleaned_latex || 'N/A'}
+📝 Extracted Equation: ${data.extracted_equation || 'N/A'}
+🧮 SymPy Output: ${data.sympy_output || 'N/A'}
+📈 OCR Quality: ${JSON.stringify(data.ocr_quality, null, 2)}
+                `;
+                
+                // Show comparison
+                showComparison(data.extracted_equation);
+            } else {
+                debugInfo.innerHTML = `❌ OCR Test Failed: ${data.error || 'Unknown error'}`;
+            }
+        }
+
+        function showComparison(actualEquation) {
+            const comparison = document.getElementById('comparison');
+            const expected = "(x^2 - 3) / 2";
+            
+            comparison.innerHTML = `
+🎯 EXPECTED vs ACTUAL COMPARISON:
+📝 Expected: ${expected}
+📝 Actual:   ${actualEquation || 'N/A'}
+
+🔍 Analysis:
+${analyzeEquation(actualEquation, expected)}
+            `;
+        }
+
+        function analyzeEquation(actual, expected) {
+            if (!actual) return "❌ No equation extracted";
+            
+            // Simple similarity check
+            const actualClean = actual.toLowerCase().replace(/\s/g, '');
+            const expectedClean = expected.toLowerCase().replace(/\s/g, '');
+            
+            if (actualClean === expectedClean) {
+                return "✅ Perfect match!";
+            }
+            
+            // Check for partial matches
+            const expectedParts = expectedClean.split(/[+\-*/=()]/).filter(p => p.length > 0);
+            const actualParts = actualClean.split(/[+\-*/=()]/).filter(p => p.length > 0);
+            
+            let matches = 0;
+            for (const part of expectedParts) {
+                if (actualParts.some(ap => ap.includes(part) || part.includes(ap))) {
+                    matches++;
+                }
+            }
+            
+            const similarity = (matches / expectedParts.length * 100).toFixed(1);
+            
+            if (similarity > 80) {
+                return `🟡 Good match (${similarity}% similarity)`;
+            } else if (similarity > 50) {
+                return `🟠 Partial match (${similarity}% similarity)`;
+            } else {
+                return `🔴 Poor match (${similarity}% similarity) - OCR recognition issue detected!`;
+            }
+        }
+
+        function solveManually(equation) {
+            if (!equation) {
+                alert('No equation available to solve');
+                return;
+            }
+            
+            document.getElementById('completeSolution').textContent = 'Solving equation manually...';
+            
+            fetch('http://localhost:5001/api/solver/solve', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ equation: equation })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('completeSolution').innerHTML = `
+🧮 MANUAL SOLUTION GENERATED:
+📏 Solution Length: ${data.solution_length || 'N/A'} characters
+📝 Solution:
+${data.solution}
+                    `;
+                } else {
+                    document.getElementById('completeSolution').innerHTML = `
+❌ Manual solving failed:
+🔍 Error: ${data.error || 'Unknown error'}
+                    `;
+                }
+            })
+            .catch(error => {
+                document.getElementById('completeSolution').innerHTML = `Error: ${error.message}`;
+            });
+        }
+
+        // Check API status on page load
+        window.onload = function() {
+            checkApiStatus();
+        };
+    </script>
+</body>
+</html>

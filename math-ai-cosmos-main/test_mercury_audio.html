@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Mercury Audio Files</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        .audio-test {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #333;
+            border-radius: 8px;
+            background: #2a2a2a;
+        }
+        .audio-test h3 {
+            margin-top: 0;
+            color: #4CAF50;
+        }
+        audio {
+            width: 100%;
+            margin: 10px 0;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .success {
+            background: #4CAF50;
+            color: white;
+        }
+        .error {
+            background: #f44336;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Mercury Audio Files</h1>
+    <p>Testing if the Mercury audio files are accessible from the public folder.</p>
+
+    <div class="audio-test">
+        <h3>1. What is a Rational Equation?</h3>
+        <audio controls>
+            <source src="/sounds/mercury/WHATISARATIONALEQUATION 1.mp3" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+        <div id="status1" class="status">Testing...</div>
+    </div>
+
+    <div class="audio-test">
+        <h3>2. Key Components of Rational Equations</h3>
+        <audio controls>
+            <source src="/sounds/mercury/Key Components of Rational Equations 1.mp3" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+        <div id="status2" class="status">Testing...</div>
+    </div>
+
+    <div class="audio-test">
+        <h3>3. Why Study Rational Equations?</h3>
+        <audio controls>
+            <source src="/sounds/mercury/Why Study Rational Equations 1.mp3" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+        <div id="status3" class="status">Testing...</div>
+    </div>
+
+    <div class="audio-test">
+        <h3>4. Basic Concepts to Review</h3>
+        <audio controls>
+            <source src="/sounds/mercury/Basic Concepts to Review.mp3" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+        <div id="status4" class="status">Testing...</div>
+    </div>
+
+    <div class="audio-test">
+        <h3>5. Steps to Solve Rational Equations</h3>
+        <audio controls>
+            <source src="/sounds/mercury/Steps To Solve Rational Equations.mp3" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+        <div id="status5" class="status">Testing...</div>
+    </div>
+
+    <script>
+        // Test each audio file
+        const audioTests = [
+            { id: 'status1', src: '/sounds/mercury/WHATISARATIONALEQUATION 1.mp3' },
+            { id: 'status2', src: '/sounds/mercury/Key Components of Rational Equations 1.mp3' },
+            { id: 'status3', src: '/sounds/mercury/Why Study Rational Equations 1.mp3' },
+            { id: 'status4', src: '/sounds/mercury/Basic Concepts to Review.mp3' },
+            { id: 'status5', src: '/sounds/mercury/Steps To Solve Rational Equations.mp3' }
+        ];
+
+        audioTests.forEach(test => {
+            fetch(test.src, { method: 'HEAD' })
+                .then(response => {
+                    const statusDiv = document.getElementById(test.id);
+                    if (response.ok) {
+                        statusDiv.textContent = '✅ File accessible';
+                        statusDiv.className = 'status success';
+                    } else {
+                        statusDiv.textContent = '❌ File not accessible';
+                        statusDiv.className = 'status error';
+                    }
+                })
+                .catch(error => {
+                    const statusDiv = document.getElementById(test.id);
+                    statusDiv.textContent = '❌ Error: ' + error.message;
+                    statusDiv.className = 'status error';
+                });
+        });
+    </script>
+</body>
+</html>

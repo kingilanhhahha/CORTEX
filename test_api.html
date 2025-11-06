@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test { margin: 10px 0; padding: 10px; border: 1px solid #ccc; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        button { padding: 10px 20px; margin: 5px; }
+        pre { background: #f8f9fa; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Math Tutor API Test</h1>
+    <div id="results"></div>
+    
+    <button onclick="testPing()">Test Ping</button>
+    <button onclick="testCreateTeacher()">Create Teacher</button>
+    <button onclick="testCreateClassroom()">Create Classroom</button>
+    <button onclick="testCreateStudent()">Create Student</button>
+    <button onclick="testJoinClassroom()">Test Join</button>
+    <button onclick="runAllTests()">Run All Tests</button>
+
+    <script>
+        const API_BASE = 'http://localhost:5055';
+        let testTeacherId = null;
+        let testClassroomData = null;
+        let testStudentId = null;
+
+        function log(message, isError = false) {
+            const div = document.createElement('div');
+            div.className = `test ${isError ? 'error' : 'success'}`;
+            div.innerHTML = `<strong>${new Date().toLocaleTimeString()}:</strong> ${message}`;
+            document.getElementById('results').appendChild(div);
+        }
+
+        async function testPing() {
+            try {
+                const response = await fetch(`${API_BASE}/api/ping`);
+                const data = await response.json();
+                log(`✅ Ping successful: ${JSON.stringify(data)}`);
+            } catch (error) {
+                log(`❌ Ping failed: ${error.message}`, true);
+            }
+        }
+
+        async function testCreateTeacher() {
+            try {
+                const response = await fetch(`${API_BASE}/api/users/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: 'test_teacher_' + Date.now(),
+                        email: 'test_teacher_' + Date.now() + '@example.com',
+                        password: 'password123',
+                        role: 'teacher'
+                    })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    testTeacherId = data.id;
+                    log(`✅ Teacher created: ${data.username} (ID: ${data.id})`);
+                } else {
+                    log(`❌ Create teacher failed: ${JSON.stringify(data)}`, true);
+                }
+            } catch (error) {
+                log(`❌ Create teacher error: ${error.message}`, true);
+            }
+        }
+
+        async function testCreateClassroom() {
+            if (!testTeacherId) {
+                log('❌ No teacher ID available. Create teacher first.', true);
+                return;
+            }
+            try {
+                const response = await fetch(`${API_BASE}/api/classrooms`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: 'Test Classroom ' + Date.now(),
+                        teacherId: testTeacherId
+                    })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    testClassroomData = data;
+                    log(`✅ Classroom created: ${data.name} (Code: ${data.joinCode})`);
+                } else {
+                    log(`❌ Create classroom failed: ${JSON.stringify(data)}`, true);
+                }
+            } catch (error) {
+                log(`❌ Create classroom error: ${error.message}`, true);
+            }
+        }
+
+        async function testCreateStudent() {
+            try {
+                const response = await fetch(`${API_BASE}/api/users/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: 'test_student_' + Date.now(),
+                        email: 'test_student_' + Date.now() + '@example.com',
+                        password: 'password123',
+                        role: 'student'
+                    })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    testStudentId = data.id;
+                    log(`✅ Student created: ${data.username} (ID: ${data.id})`);
+                } else {
+                    log(`❌ Create student failed: ${JSON.stringify(data)}`, true);
+                }
+            } catch (error) {
+                log(`❌ Create student error: ${error.message}`, true);
+            }
+        }
+
+        async function testJoinClassroom() {
+            if (!testClassroomData || !testStudentId) {
+                log('❌ Need classroom and student data. Create them first.', true);
+                return;
+            }
+            try {
+                const response = await fetch(`${API_BASE}/api/classrooms/join`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        joinCode: testClassroomData.joinCode,
+                        studentId: testStudentId
+                    })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    log(`✅ Join successful: ${data.classroom.name}`);
+                    if (data.teacher) {
+                        log(`   Teacher: ${data.teacher.username}`);
+                    } else {
+                        log(`   ❌ No teacher info returned`, true);
+                    }
+                } else {
+                    log(`❌ Join failed: ${JSON.stringify(data)}`, true);
+                }
+            } catch (error) {
+                log(`❌ Join error: ${error.message}`, true);
+            }
+        }
+
+        async function runAllTests() {
+            document.getElementById('results').innerHTML = '';
+            log('🧪 Running all tests...');
+            
+            await testPing();
+            await testCreateTeacher();
+            await testCreateClassroom();
+            await testCreateStudent();
+            await testJoinClassroom();
+            
+            log('🏁 All tests completed!');
+        }
+    </script>
+</body>
+</html>
+
+

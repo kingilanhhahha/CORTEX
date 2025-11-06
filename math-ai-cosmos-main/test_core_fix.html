@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Core Database Fix Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { border-color: #4caf50; background-color: #e8f5e8; }
+        .error { border-color: #f44336; background-color: #ffebee; }
+        button { background: #2196f3; color: white; border: none; padding: 10px 20px; margin: 5px; cursor: pointer; }
+        .log { background: #f8f9fa; border: 1px solid #dee2e6; padding: 10px; margin: 10px 0; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h1>Core Database Fix Test</h1>
+    
+    <div class="test-section">
+        <h3>Test Controls</h3>
+        <button onclick="testDatabaseInitialization()">Test Database Initialization</button>
+        <button onclick="testUserCreation()">Test User Creation</button>
+        <button onclick="testUserRetrieval()">Test User Retrieval</button>
+        <button onclick="clearData()">Clear Data</button>
+    </div>
+    
+    <div class="test-section">
+        <h3>Results</h3>
+        <div id="results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Log</h3>
+        <div id="log" class="log"></div>
+    </div>
+
+    <script>
+        // Core database class that mimics the fixed database.ts
+        class CoreDatabase {
+            constructor() {
+                this.STORAGE_KEY = 'mathtutor_data';
+            }
+
+            generateId() {
+                return 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            }
+
+            loadData() {
+                try {
+                    const data = localStorage.getItem(this.STORAGE_KEY);
+                    if (data) {
+                        const parsed = JSON.parse(data);
+                        // Ensure we return a valid object with expected structure
+                        return parsed && typeof parsed === 'object' ? parsed : {
+                            users: [],
+                            teacherAccess: [],
+                            studentProgress: [],
+                            classrooms: {}
+                        };
+                    }
+                    return {
+                        users: [],
+                        teacherAccess: [],
+                        studentProgress: [],
+                        classrooms: {}
+                    };
+                } catch (error) {
+                    console.error('Failed to load data:', error);
+                    return {
+                        users: [],
+                        teacherAccess: [],
+                        studentProgress: [],
+                        classrooms: {}
+                    };
+                }
+            }
+
+            saveData(data) {
+                try {
+                    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
+                } catch (error) {
+                    console.error('Failed to save data:', error);
+                }
+            }
+
+            getUsers() {
+                try {
+                    const data = this.loadData();
+                    const users = data.users;
+                    
+                    // Ensure we always return an array
+                    if (Array.isArray(users)) {
+                        return users;
+                    } else if (users && typeof users === 'object') {
+                        // If users is an object, try to convert it to array
+                        console.warn('Users data is not an array, attempting to convert...');
+                        return Object.values(users);
+                    } else {
+                        console.warn('No users data found, returning empty array');
+                        return [];
+                    }
+                } catch (e) {
+                    console.error('Error loading users from localStorage:', e);
+                    return [];
+                }
+            }
+
+            saveUsers(users) {
+                try {
+                    const data = this.loadData();
+                    data.users = users;
+                    this.saveData(data);
+                } catch (e) {
+                    console.error('Failed to save users:', e);
+                }
+            }
+
+            createUser(userData) {
+                try {
+                    const newUser = {
+                        ...userData,
+                        id: this.generateId(),
+                        createdAt: new Date().toISOString(),
+                        lastLogin: new Date().toISOString(),
+                        cadetAvatar: userData.cadetAvatar || 'king-sadboi',
+                    };
+                    
+                    const users = this.getUsers();
+                    
+                    // Ensure users is an array before calling .find()
+                    if (!Array.isArray(users)) {
+                        console.error('Users is not an array:', users);
+                        throw new Error('Database error: users data is corrupted');
+                    }
+                    
+                    if (users.find((u) => u.username === userData.username)) {
+                        throw new Error('Username already exists');
+                    }
+                    if (users.find((u) => u.email === userData.email)) {
+                        throw new Error('Email already exists');
+                    }
+                    
+                    users.push(newUser);
+                    this.saveUsers(users);
+                    return newUser;
+                } catch (error) {
+                    console.error('Error creating user:', error);
+                    throw error;
+                }
+            }
+
+            getUserByUsername(username) {
+                try {
+                    const users = this.getUsers();
+                    
+                    // Ensure users is an array before calling .find()
+                    if (!Array.isArray(users)) {
+                        console.error('Users is not an array:', users);
+                        return null;
+                    }
+                    
+                    const user = users.find((u) => u.username === username);
+                    return user || null;
+                } catch (error) {
+                    console.error('Error getting user by username:', error);
+                    return null;
+                }
+            }
+
+            initializeSampleData() {
+                try {
+                    log('📝 Initializing sample data...');
+                    
+                    // Create sample teacher
+                    const teacherUser = this.createUser({
+                        username: 'demo_teacher',
+                        email: 'teacher@demo.local',
+                        password: 'demo123',
+                        role: 'teacher'
+                    });
+                    log(`✅ Created teacher: ${teacherUser.username}`);
+                    
+                    // Create sample student
+                    const studentUser = this.createUser({
+                        username: 'demo_student',
+                        email: 'student@demo.local',
+                        password: 'demo123',
+                        role: 'student'
+                    });
+                    log(`✅ Created student: ${studentUser.username}`);
+                    
+                    log('✅ Sample data initialization completed');
+                    return { teacherUser, studentUser };
+                } catch (error) {
+                    log(`❌ Failed to initialize sample data: ${error.message}`);
+                    throw error;
+                }
+            }
+        }
+
+        const db = new CoreDatabase();
+
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+
+        function showResults(message, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `test-section ${type}`;
+            div.innerHTML = message;
+            resultsDiv.appendChild(div);
+        }
+
+        async function testDatabaseInitialization() {
+            try {
+                log('🚀 Testing database initialization...');
+                
+                const sampleData = await db.initializeSampleData();
+                
+                // Test getting users
+                const users = db.getUsers();
+                log(`✅ Retrieved ${users.length} users`);
+                
+                if (Array.isArray(users)) {
+                    log('✅ Users is properly an array');
+                } else {
+                    throw new Error('Users is not an array');
+                }
+                
+                showResults('✅ Database initialization test passed!', 'success');
+            } catch (error) {
+                showResults(`❌ Database initialization test failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testUserCreation() {
+            try {
+                log('👤 Testing user creation...');
+                
+                const newUser = db.createUser({
+                    username: 'test_user',
+                    email: 'test@example.com',
+                    password: 'test123',
+                    role: 'student'
+                });
+                
+                log(`✅ Created user: ${newUser.username}`);
+                
+                // Verify user was saved
+                const users = db.getUsers();
+                const foundUser = users.find(u => u.username === 'test_user');
+                
+                if (foundUser) {
+                    log('✅ User was properly saved to database');
+                } else {
+                    throw new Error('User was not saved properly');
+                }
+                
+                showResults('✅ User creation test passed!', 'success');
+            } catch (error) {
+                showResults(`❌ User creation test failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testUserRetrieval() {
+            try {
+                log('🔍 Testing user retrieval...');
+                
+                const user = db.getUserByUsername('demo_student');
+                
+                if (user) {
+                    log(`✅ Retrieved user: ${user.username} (${user.role})`);
+                } else {
+                    throw new Error('Failed to retrieve user');
+                }
+                
+                showResults('✅ User retrieval test passed!', 'success');
+            } catch (error) {
+                showResults(`❌ User retrieval test failed: ${error.message}`, 'error');
+            }
+        }
+
+        function clearData() {
+            try {
+                localStorage.clear();
+                showResults('✅ All data cleared successfully.', 'success');
+                log('All localStorage data cleared');
+            } catch (error) {
+                showResults(`❌ Failed to clear data: ${error.message}`, 'error');
+            }
+        }
+
+        // Initialize
+        log('Core Database Fix Test initialized');
+        showResults('🚀 Ready to test! Click "Test Database Initialization" to start.', 'info');
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classroom Fix Test - Math AI Cosmos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success { border-color: #4caf50; background-color: #e8f5e8; }
+        .error { border-color: #f44336; background-color: #ffebee; }
+        .info { border-color: #2196f3; background-color: #e3f2fd; }
+        .warning { border-color: #ff9800; background-color: #fff3e0; }
+        button {
+            background: #2196f3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #1976d2; }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px 0;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .classroom-card {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+            background: #f9f9f9;
+        }
+        .classroom-card h4 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .classroom-card .join-code {
+            font-family: monospace;
+            font-size: 18px;
+            font-weight: bold;
+            color: #2196f3;
+            background: #e3f2fd;
+            padding: 5px 10px;
+            border-radius: 3px;
+            display: inline-block;
+        }
+        .student-info {
+            background: #e8f5e8;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .teacher-info {
+            background: #fff3e0;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Classroom Fix Test - Math AI Cosmos</h1>
+        <p>This page tests the fixed classroom joining functionality that now works like Google Classroom in offline mode.</p>
+        
+        <div class="test-section info">
+            <h3>Test Controls</h3>
+            <button onclick="initializeDatabase()">Initialize Database</button>
+            <button onclick="showSampleData()">Show Sample Data</button>
+            <button onclick="testClassroomJoin()">Test Classroom Join</button>
+            <button onclick="testGuestJoin()">Test Guest Join</button>
+            <button onclick="showAllClassrooms()">Show All Classrooms</button>
+            <button onclick="clearAllData()">Clear All Data</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>Current User</h3>
+            <div id="currentUser"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>Available Classrooms</h3>
+            <div id="availableClassrooms"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>Test Results</h3>
+            <div id="results"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>Console Log</h3>
+            <div id="log" class="log"></div>
+        </div>
+    </div>
+
+    <script>
+        // Mock the database class for testing
+        class MockHybridDatabase {
+            constructor() {
+                this.STORAGE_KEY = 'mathtutor_data';
+                this.COMPRESSED_KEY = 'mathtutor_data_compressed';
+                this.CHUNK_SIZE = 1000000;
+                this.MAX_CHUNKS = 10;
+            }
+
+            generateId() {
+                return 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            }
+
+            getUsers() {
+                try {
+                    const data = this.loadChunkedData();
+                    return data.users || [];
+                } catch (e) {
+                    return [];
+                }
+            }
+
+            saveUsers(users) {
+                const data = this.loadChunkedData();
+                data.users = users;
+                this.saveChunkedData(data);
+            }
+
+            getUserById(userId) {
+                const users = this.getUsers();
+                const user = users.find(u => u.id === userId);
+                return user ? this.parseUser(user) : null;
+            }
+
+            parseUser(u) {
+                return { ...u, createdAt: new Date(u.createdAt), lastLogin: new Date(u.lastLogin) };
+            }
+
+            getTeacherAccessData() {
+                const data = this.loadChunkedData();
+                return data.teacherAccess || [];
+            }
+
+            saveTeacherAccessData(access) {
+                const data = this.loadChunkedData();
+                data.teacherAccess = access;
+                this.saveChunkedData(data);
+            }
+
+            // Simplified storage methods for testing
+            loadChunkedData() {
+                try {
+                    const data = localStorage.getItem(this.STORAGE_KEY);
+                    return data ? JSON.parse(data) : {};
+                } catch (error) {
+                    return {};
+                }
+            }
+
+            saveChunkedData(data) {
+                try {
+                    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
+                } catch (error) {
+                    console.error('Failed to save data:', error);
+                }
+            }
+
+            shouldFallback(err) {
+                return true; // Always fallback for testing
+            }
+
+            async joinClassroom(joinCode, studentId) {
+                try {
+                    console.log(`🎓 Joining classroom with code: ${joinCode} for student: ${studentId}`);
+                    
+                    // Simulate API failure to trigger offline mode
+                    throw new Error('API unavailable');
+                } catch (err) {
+                    if (this.shouldFallback(err)) {
+                        console.warn('API unavailable, attempting local join');
+                        
+                        // Get the student user data first
+                        const student = await this.getUserById(studentId);
+                        if (!student) {
+                            throw new Error('Student not found in local database');
+                        }
+                        
+                        // Search all locally stored classrooms for a matching join code
+                        const localClassroomListsKeys = Object.keys(localStorage).filter(k => k.startsWith(`${this.STORAGE_KEY}_classrooms_`));
+                        let matchedClassroom = null;
+                        let matchedTeacherId = null;
+                        
+                        for (const listKey of localClassroomListsKeys) {
+                            try {
+                                const list = JSON.parse(localStorage.getItem(listKey) || '[]');
+                                const found = list.find(c => c.joinCode?.toUpperCase() === joinCode.toUpperCase() && c.isActive !== false);
+                                if (found) {
+                                    matchedClassroom = found;
+                                    matchedTeacherId = listKey.replace(`${this.STORAGE_KEY}_classrooms_`, '');
+                                    break;
+                                }
+                            } catch (e) {
+                                console.warn('Error parsing classroom list:', e);
+                            }
+                        }
+
+                        if (matchedClassroom && matchedTeacherId) {
+                            // Get teacher information
+                            const teacher = await this.getUserById(matchedTeacherId);
+                            if (!teacher) {
+                                throw new Error('Teacher not found for this classroom');
+                            }
+                            
+                            // Update classroom details with new member
+                            const detailsKey = `${this.STORAGE_KEY}_classroom_${matchedClassroom.id}`;
+                            let details;
+                            
+                            try {
+                                const storedDetails = localStorage.getItem(detailsKey);
+                                if (storedDetails) {
+                                    details = JSON.parse(storedDetails);
+                                } else {
+                                    details = { 
+                                        classroom: matchedClassroom, 
+                                        members: [] 
+                                    };
+                                }
+                            } catch (e) {
+                                details = { 
+                                    classroom: matchedClassroom, 
+                                    members: [] 
+                                };
+                            }
+                            
+                            // Ensure members is always an array
+                            if (!Array.isArray(details.members)) {
+                                details.members = [];
+                            }
+                            
+                            // Check if already a member
+                            const alreadyMember = details.members.some(m => m.studentId === studentId);
+                            
+                            if (!alreadyMember) {
+                                // Add new member
+                                const member = {
+                                    id: this.generateId(),
+                                    classroomId: matchedClassroom.id,
+                                    studentId,
+                                    joinedAt: new Date(),
+                                    isGuest: !!student?.username?.startsWith('guest_'),
+                                    username: student?.username,
+                                    email: student?.email,
+                                };
+                                
+                                details.members.push(member);
+                                localStorage.setItem(detailsKey, JSON.stringify(details));
+                                
+                                console.log(`✅ Student ${student.username} joined classroom ${matchedClassroom.name}`);
+                            }
+
+                            // Update student-side membership cache
+                            const studentKey = `${this.STORAGE_KEY}_student_classrooms_${studentId}`;
+                            let existing = [];
+                            
+                            try {
+                                const storedExisting = localStorage.getItem(studentKey);
+                                if (storedExisting) {
+                                    existing = JSON.parse(storedExisting);
+                                }
+                            } catch (e) {
+                                existing = [];
+                            }
+                            
+                            if (!Array.isArray(existing)) {
+                                existing = [];
+                            }
+                            
+                            if (!existing.find(c => c.id === matchedClassroom.id)) {
+                                existing.push(matchedClassroom);
+                                localStorage.setItem(studentKey, JSON.stringify(existing));
+                            }
+
+                            // Update teacher's classroom list studentCount
+                            try {
+                                const listKey = `${this.STORAGE_KEY}_classrooms_${matchedTeacherId}`;
+                                const storedList = localStorage.getItem(listKey);
+                                if (storedList) {
+                                    const list = JSON.parse(storedList);
+                                    if (Array.isArray(list)) {
+                                        const idx = list.findIndex(c => c.id === matchedClassroom.id);
+                                        if (idx !== -1) {
+                                            const count = details.members.length;
+                                            list[idx] = { ...list[idx], studentCount: count };
+                                            localStorage.setItem(listKey, JSON.stringify(list));
+                                        }
+                                    }
+                                }
+                            } catch (e) {
+                                console.warn('Error updating teacher classroom list:', e);
+                            }
+
+                            // Create teacher access mapping if it doesn't exist
+                            try {
+                                const teacherAccess = this.getTeacherAccessData();
+                                const accessExists = teacherAccess.some(a => a.teacherId === matchedTeacherId && a.studentId === studentId);
+                                
+                                if (!accessExists) {
+                                    const newAccess = {
+                                        id: this.generateId(),
+                                        teacherId: matchedTeacherId,
+                                        studentId: studentId,
+                                        grantedAt: new Date(),
+                                        permissions: ['view_progress', 'view_assignments']
+                                    };
+                                    teacherAccess.push(newAccess);
+                                    this.saveTeacherAccessData(teacherAccess);
+                                }
+                            } catch (e) {
+                                console.warn('Error creating teacher access:', e);
+                            }
+
+                            return { 
+                                ok: true, 
+                                classroom: matchedClassroom, 
+                                teacher: teacher 
+                            };
+                        }
+
+                        // No classroom found locally – record a pending join for later sync
+                        const pendingJoins = JSON.parse(localStorage.getItem(`${this.STORAGE_KEY}_pending_joins`) || '[]');
+                        if (Array.isArray(pendingJoins)) {
+                            pendingJoins.push({ 
+                                joinCode, 
+                                studentId, 
+                                timestamp: new Date().toISOString(),
+                                studentName: student?.username || 'Unknown'
+                            });
+                            localStorage.setItem(`${this.STORAGE_KEY}_pending_joins`, JSON.stringify(pendingJoins));
+                        }
+
+                        // Create a placeholder classroom for pending join
+                        const placeholder = { 
+                            id: `pending_${Date.now()}`,
+                            name: 'Pending Join - ' + joinCode, 
+                            teacherId: '', 
+                            joinCode, 
+                            createdAt: new Date(), 
+                            isActive: true,
+                            studentCount: 0
+                        };
+                        
+                        const key = `${this.STORAGE_KEY}_student_classrooms_${studentId}`;
+                        let existing = [];
+                        
+                        try {
+                            const storedExisting = localStorage.getItem(key);
+                            if (storedExisting) {
+                                existing = JSON.parse(storedExisting);
+                            }
+                        } catch (e) {
+                            existing = [];
+                        }
+                        
+                        if (!Array.isArray(existing)) {
+                            existing = [];
+                        }
+                        
+                        existing.push(placeholder);
+                        localStorage.setItem(key, JSON.stringify(existing));
+
+                        return { 
+                            ok: true, 
+                            classroom: placeholder, 
+                            teacher: null 
+                        };
+                    }
+                    throw err;
+                }
+            }
+
+            async initializeSampleData() {
+                try {
+                    console.log('📝 Initializing sample data for offline mode...');
+                    
+                    // Create sample teacher if none exists
+                    const existingUsers = this.getUsers();
+                    let teacherUser = existingUsers.find(u => u.role === 'teacher');
+                    
+                    if (!teacherUser) {
+                        teacherUser = {
+                            id: this.generateId(),
+                            username: 'demo_teacher',
+                            email: 'teacher@demo.local',
+                            password: 'demo123',
+                            role: 'teacher',
+                            createdAt: new Date(),
+                            lastLogin: new Date(),
+                            cadetAvatar: 'king-sadboi'
+                        };
+                        existingUsers.push(teacherUser);
+                        this.saveUsers(existingUsers);
+                        console.log('✅ Created sample teacher:', teacherUser.username);
+                    }
+                    
+                    // Create sample classrooms if none exist
+                    const teacherClassroomsKey = `${this.STORAGE_KEY}_classrooms_${teacherUser.id}`;
+                    let existingClassrooms = [];
+                    
+                    try {
+                        const stored = localStorage.getItem(teacherClassroomsKey);
+                        if (stored) {
+                            existingClassrooms = JSON.parse(stored);
+                        }
+                    } catch (e) {
+                        existingClassrooms = [];
+                    }
+                    
+                    if (!Array.isArray(existingClassrooms)) {
+                        existingClassrooms = [];
+                    }
+                    
+                    if (existingClassrooms.length === 0) {
+                        // Create sample classrooms
+                        const sampleClassrooms = [
+                            {
+                                id: this.generateId(),
+                                name: 'Math Fundamentals 101',
+                                teacherId: teacherUser.id,
+                                joinCode: 'MATH101',
+                                createdAt: new Date(),
+                                isActive: true,
+                                studentCount: 0
+                            },
+                            {
+                                id: this.generateId(),
+                                name: 'Advanced Algebra',
+                                teacherId: teacherUser.id,
+                                joinCode: 'ALGEBRA',
+                                createdAt: new Date(),
+                                isActive: true,
+                                studentCount: 0
+                            },
+                            {
+                                id: this.generateId(),
+                                name: 'Geometry & Trigonometry',
+                                teacherId: teacherUser.id,
+                                joinCode: 'GEOMETRY',
+                                createdAt: new Date(),
+                                isActive: true,
+                                studentCount: 0
+                            }
+                        ];
+                        
+                        // Save teacher's classroom list
+                        localStorage.setItem(teacherClassroomsKey, JSON.stringify(sampleClassrooms));
+                        
+                        // Create classroom details for each classroom
+                        sampleClassrooms.forEach(classroom => {
+                            const detailsKey = `${this.STORAGE_KEY}_classroom_${classroom.id}`;
+                            const details = {
+                                classroom: classroom,
+                                members: []
+                            };
+                            localStorage.setItem(detailsKey, JSON.stringify(details));
+                        });
+                        
+                        console.log('✅ Created sample classrooms:', sampleClassrooms.map(c => c.name).join(', '));
+                    }
+                    
+                    // Create sample student if none exists
+                    let studentUser = existingUsers.find(u => u.role === 'student');
+                    
+                    if (!studentUser) {
+                        studentUser = {
+                            id: this.generateId(),
+                            username: 'demo_student',
+                            email: 'student@demo.local',
+                            password: 'demo123',
+                            role: 'student',
+                            createdAt: new Date(),
+                            lastLogin: new Date(),
+                            cadetAvatar: 'king-sadboi'
+                        };
+                        existingUsers.push(studentUser);
+                        this.saveUsers(existingUsers);
+                        console.log('✅ Created sample student:', studentUser.username);
+                    }
+                    
+                    console.log('📝 Sample data initialization completed');
+                } catch (error) {
+                    console.error('❌ Failed to initialize sample data:', error);
+                }
+            }
+
+            async getAvailableClassrooms() {
+                const availableClassrooms = [];
+                
+                try {
+                    // Get all teacher classroom lists
+                    const teacherKeys = Object.keys(localStorage).filter(k => k.startsWith(`${this.STORAGE_KEY}_classrooms_`));
+                    
+                    for (const teacherKey of teacherKeys) {
+                        const teacherId = teacherKey.replace(`${this.STORAGE_KEY}_classrooms_`, '');
+                        
+                        try {
+                            const teacher = await this.getUserById(teacherId);
+                            if (!teacher || teacher.role !== 'teacher') continue;
+                            
+                            const classroomList = localStorage.getItem(teacherKey);
+                            if (classroomList) {
+                                const classrooms = JSON.parse(classroomList);
+                                
+                                if (Array.isArray(classrooms)) {
+                                    // Only include active classrooms
+                                    const activeClassrooms = classrooms.filter(c => c.isActive !== false);
+                                    
+                                    activeClassrooms.forEach(classroom => {
+                                        availableClassrooms.push({
+                                            classroom: classroom,
+                                            teacher: teacher
+                                        });
+                                    });
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('Error processing teacher classrooms:', e);
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error getting available classrooms:', e);
+                }
+                
+                return availableClassrooms;
+            }
+        }
+
+        const mockDb = new MockHybridDatabase();
+        let currentUser = null;
+
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+
+        function showResults(message, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `test-section ${type}`;
+            div.innerHTML = message;
+            resultsDiv.appendChild(div);
+        }
+
+        function updateCurrentUser() {
+            const userDiv = document.getElementById('currentUser');
+            if (currentUser) {
+                userDiv.innerHTML = `
+                    <div class="student-info">
+                        <strong>Current User:</strong> ${currentUser.username} (${currentUser.role})
+                        <br><small>ID: ${currentUser.id}</small>
+                    </div>
+                `;
+            } else {
+                userDiv.innerHTML = '<em>No user logged in</em>';
+            }
+        }
+
+        async function initializeDatabase() {
+            try {
+                log('🚀 Initializing database with sample data...');
+                await mockDb.initializeSampleData();
+                
+                // Set current user to demo student
+                const users = mockDb.getUsers();
+                currentUser = users.find(u => u.role === 'student');
+                
+                if (currentUser) {
+                    updateCurrentUser();
+                    showResults('✅ Database initialized successfully! Sample teacher and classrooms created.', 'success');
+                    log(`✅ Logged in as: ${currentUser.username}`);
+                } else {
+                    showResults('❌ Failed to create sample student user.', 'error');
+                }
+            } catch (error) {
+                showResults(`❌ Database initialization failed: ${error.message}`, 'error');
+                log(`❌ Error: ${error.message}`);
+            }
+        }
+
+        async function showSampleData() {
+            try {
+                const users = mockDb.getUsers();
+                const availableClassrooms = await mockDb.getAvailableClassrooms();
+                
+                let html = '<h4>Sample Users</h4>';
+                users.forEach(user => {
+                    html += `<div class="student-info">${user.username} (${user.role}) - ${user.email}</div>`;
+                });
+                
+                html += '<h4>Available Classrooms</h4>';
+                if (availableClassrooms.length > 0) {
+                    availableClassrooms.forEach(({ classroom, teacher }) => {
+                        html += `
+                            <div class="classroom-card">
+                                <h4>${classroom.name}</h4>
+                                <p><strong>Teacher:</strong> ${teacher.username}</p>
+                                <p><strong>Join Code:</strong> <span class="join-code">${classroom.joinCode}</span></p>
+                                <p><strong>Students:</strong> ${classroom.studentCount}</p>
+                            </div>
+                        `;
+                    });
+                } else {
+                    html += '<p>No classrooms available</p>';
+                }
+                
+                showResults(html, 'info');
+            } catch (error) {
+                showResults(`❌ Failed to show sample data: ${error.message}`, 'error');
+            }
+        }
+
+        async function testClassroomJoin() {
+            if (!currentUser) {
+                showResults('❌ Please initialize database first to create a user.', 'warning');
+                return;
+            }
+            
+            try {
+                log(`🎓 Testing classroom join for student: ${currentUser.username}`);
+                
+                // Try to join the MATH101 classroom
+                const result = await mockDb.joinClassroom('MATH101', currentUser.id);
+                
+                if (result.ok) {
+                    showResults(`✅ Successfully joined classroom: ${result.classroom.name}`, 'success');
+                    log(`✅ Joined classroom: ${result.classroom.name}`);
+                    
+                    if (result.teacher) {
+                        log(`✅ Teacher: ${result.teacher.username}`);
+                    }
+                    
+                    // Show updated classroom info
+                    await showSampleData();
+                } else {
+                    showResults('❌ Failed to join classroom', 'error');
+                }
+            } catch (error) {
+                showResults(`❌ Classroom join failed: ${error.message}`, 'error');
+                log(`❌ Error: ${error.message}`);
+            }
+        }
+
+        async function testGuestJoin() {
+            try {
+                log('🎓 Testing guest classroom join...');
+                
+                // Create a guest user
+                const guestUser = {
+                    id: mockDb.generateId(),
+                    username: 'guest_test_user',
+                    email: 'guest@test.local',
+                    role: 'student',
+                    createdAt: new Date(),
+                    lastLogin: new Date()
+                };
+                
+                // Add guest to users
+                const users = mockDb.getUsers();
+                users.push(guestUser);
+                mockDb.saveUsers(users);
+                
+                // Try to join as guest
+                const result = await mockDb.joinClassroom('ALGEBRA', guestUser.id);
+                
+                if (result.ok) {
+                    showResults(`✅ Guest successfully joined classroom: ${result.classroom.name}`, 'success');
+                    log(`✅ Guest joined classroom: ${result.classroom.name}`);
+                } else {
+                    showResults('❌ Guest failed to join classroom', 'error');
+                }
+            } catch (error) {
+                showResults(`❌ Guest join failed: ${error.message}`, 'error');
+                log(`❌ Error: ${error.message}`);
+            }
+        }
+
+        async function showAllClassrooms() {
+            try {
+                const availableClassrooms = await mockDb.getAvailableClassrooms();
+                
+                let html = '<h4>All Available Classrooms</h4>';
+                if (availableClassrooms.length > 0) {
+                    availableClassrooms.forEach(({ classroom, teacher }) => {
+                        html += `
+                            <div class="classroom-card">
+                                <h4>${classroom.name}</h4>
+                                <p><strong>Teacher:</strong> ${teacher.username}</p>
+                                <p><strong>Join Code:</strong> <span class="join-code">${classroom.joinCode}</span></p>
+                                <p><strong>Students:</strong> ${classroom.studentCount}</p>
+                                <p><strong>Status:</strong> ${classroom.isActive ? 'Active' : 'Inactive'}</p>
+                            </div>
+                        `;
+                    });
+                } else {
+                    html += '<p>No classrooms available</p>';
+                }
+                
+                showResults(html, 'info');
+            } catch (error) {
+                showResults(`❌ Failed to show classrooms: ${error.message}`, 'error');
+            }
+        }
+
+        function clearAllData() {
+            try {
+                localStorage.clear();
+                currentUser = null;
+                updateCurrentUser();
+                showResults('✅ All data cleared successfully.', 'success');
+                log('All localStorage data cleared');
+            } catch (error) {
+                showResults(`❌ Failed to clear data: ${error.message}`, 'error');
+            }
+        }
+
+        // Initialize
+        log('Classroom Fix Test initialized');
+        showResults('🚀 Ready to test the classroom functionality! Click "Initialize Database" to start.', 'info');
+        updateCurrentUser();
+    </script>
+</body>
+</html>
+

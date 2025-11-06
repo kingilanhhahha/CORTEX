@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug - MathVerse</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #0f0f23;
+            color: #ffffff;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .card {
+            background-color: #1a1a2e;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 5px 0;
+        }
+        .success { background-color: #2d5a2d; }
+        .error { background-color: #5a2d2d; }
+        .warning { background-color: #5a5a2d; }
+        button {
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #357abd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 MathVerse Debug Page</h1>
+        
+        <div class="card">
+            <h2>Browser Environment</h2>
+            <div id="browser-info"></div>
+        </div>
+        
+        <div class="card">
+            <h2>Local Storage Test</h2>
+            <div id="storage-info"></div>
+            <button onclick="testLocalStorage()">Test Local Storage</button>
+            <button onclick="clearLocalStorage()">Clear Local Storage</button>
+        </div>
+        
+        <div class="card">
+            <h2>Console Test</h2>
+            <button onclick="testConsole()">Test Console Log</button>
+            <button onclick="testError()">Test Error Log</button>
+        </div>
+        
+        <div class="card">
+            <h2>Navigation</h2>
+            <button onclick="goToMainApp()">Go to Main App</button>
+            <button onclick="goToTestPage()">Go to Test Page</button>
+        </div>
+    </div>
+
+    <script>
+        // Browser environment check
+        function checkBrowserEnvironment() {
+            const info = document.getElementById('browser-info');
+            const checks = [
+                { name: 'JavaScript', test: () => true, expected: true },
+                { name: 'Local Storage', test: () => typeof localStorage !== 'undefined', expected: true },
+                { name: 'Session Storage', test: () => typeof sessionStorage !== 'undefined', expected: true },
+                { name: 'Console', test: () => typeof console !== 'undefined', expected: true },
+                { name: 'Fetch API', test: () => typeof fetch !== 'undefined', expected: true },
+                { name: 'ES6 Modules', test: () => typeof import !== 'undefined', expected: true },
+                { name: 'User Agent', test: () => navigator.userAgent.length > 0, expected: true }
+            ];
+            
+            let html = '';
+            checks.forEach(check => {
+                const result = check.test();
+                const status = result === check.expected ? 'success' : 'error';
+                html += `<div class="status ${status}">${check.name}: ${result ? '✅' : '❌'}</div>`;
+            });
+            
+            html += `<div class="status warning">User Agent: ${navigator.userAgent}</div>`;
+            info.innerHTML = html;
+        }
+        
+        // Local storage test
+        function testLocalStorage() {
+            const info = document.getElementById('storage-info');
+            try {
+                localStorage.setItem('debug_test', 'test_value');
+                const retrieved = localStorage.getItem('debug_test');
+                localStorage.removeItem('debug_test');
+                
+                if (retrieved === 'test_value') {
+                    info.innerHTML = '<div class="status success">Local Storage: ✅ Working</div>';
+                } else {
+                    info.innerHTML = '<div class="status error">Local Storage: ❌ Failed</div>';
+                }
+            } catch (error) {
+                info.innerHTML = `<div class="status error">Local Storage: ❌ Error - ${error.message}</div>`;
+            }
+        }
+        
+        function clearLocalStorage() {
+            try {
+                localStorage.clear();
+                document.getElementById('storage-info').innerHTML = '<div class="status success">Local Storage: ✅ Cleared</div>';
+            } catch (error) {
+                document.getElementById('storage-info').innerHTML = `<div class="status error">Local Storage: ❌ Error - ${error.message}</div>`;
+            }
+        }
+        
+        // Console test
+        function testConsole() {
+            console.log('🧪 Debug: Console test successful');
+            alert('Check browser console for test message');
+        }
+        
+        function testError() {
+            console.error('🧪 Debug: Error test');
+            alert('Check browser console for error message');
+        }
+        
+        // Navigation
+        function goToMainApp() {
+            window.location.href = '/';
+        }
+        
+        function goToTestPage() {
+            window.location.href = '/test';
+        }
+        
+        // Initialize
+        checkBrowserEnvironment();
+        testLocalStorage();
+    </script>
+</body>
+</html> 

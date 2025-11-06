@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backend Test - Quantum Solver</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        .test-section {
+            background: #2a2a2a;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border: 1px solid #444;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border: 1px solid #444;
+            background: #333;
+            color: white;
+        }
+        .result {
+            background: #333;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .error {
+            background: #dc3545;
+            color: white;
+        }
+        .success {
+            background: #28a745;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Quantum Solver Backend Test</h1>
+    
+    <div class="test-section">
+        <h3>1️⃣ Health Check</h3>
+        <button onclick="testHealth()">Test Health Endpoint</button>
+        <div id="healthResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>2️⃣ Calculator Instance Test</h3>
+        <button onclick="testCalculator()">Test Calculator Creation</button>
+        <div id="calculatorResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>3️⃣ Function Analysis Test</h3>
+        <input type="text" id="functionInput" placeholder="Enter function: (x^2-4)/(x-2)" value="(x^2-4)/(x-2)">
+        <button onclick="testAnalysis()">Analyze Function</button>
+        <div id="analysisResult" class="result"></div>
+    </div>
+
+    <script>
+        const BASE_URL = 'http://localhost:5001';
+        
+        async function testHealth() {
+            const resultDiv = document.getElementById('healthResult');
+            resultDiv.textContent = 'Testing...';
+            resultDiv.className = 'result';
+            
+            try {
+                const response = await fetch(`${BASE_URL}/api/health`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.textContent = `✅ Health Check Success:\n${JSON.stringify(data, null, 2)}`;
+                    resultDiv.className = 'result success';
+                } else {
+                    resultDiv.textContent = `❌ Health Check Failed:\nStatus: ${response.status}\n${JSON.stringify(data, null, 2)}`;
+                    resultDiv.className = 'result error';
+                }
+            } catch (error) {
+                resultDiv.textContent = `❌ Connection Error:\n${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+        
+        async function testCalculator() {
+            const resultDiv = document.getElementById('calculatorResult');
+            resultDiv.textContent = 'Testing...';
+            resultDiv.className = 'result';
+            
+            try {
+                const response = await fetch(`${BASE_URL}/api/test`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.textContent = `✅ Calculator Test Success:\n${JSON.stringify(data, null, 2)}`;
+                    resultDiv.className = 'result success';
+                } else {
+                    resultDiv.textContent = `❌ Calculator Test Failed:\nStatus: ${response.status}\n${JSON.stringify(data, null, 2)}`;
+                    resultDiv.className = 'result error';
+                }
+            } catch (error) {
+                resultDiv.textContent = `❌ Connection Error:\n${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+        
+        async function testAnalysis() {
+            const resultDiv = document.getElementById('analysisResult');
+            const functionInput = document.getElementById('functionInput').value;
+            
+            if (!functionInput.trim()) {
+                resultDiv.textContent = '❌ Please enter a function to analyze';
+                resultDiv.className = 'result error';
+                return;
+            }
+            
+            resultDiv.textContent = 'Analyzing...';
+            resultDiv.className = 'result';
+            
+            try {
+                const response = await fetch(`${BASE_URL}/api/rational-function/analyze`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        function: functionInput.trim()
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    if (data.success) {
+                        resultDiv.textContent = `✅ Analysis Success:\nFunction: ${data.function}\nSteps: ${data.analysis.steps.length}\n\nAnalysis Data:\n${JSON.stringify(data.analysis, null, 2)}`;
+                        resultDiv.className = 'result success';
+                    } else {
+                        resultDiv.textContent = `❌ Analysis Failed:\n${data.error || 'Unknown error'}`;
+                        resultDiv.className = 'result error';
+                    }
+                } else {
+                    resultDiv.textContent = `❌ Request Failed:\nStatus: ${response.status}\n${JSON.stringify(data, null, 2)}`;
+                    resultDiv.className = 'result error';
+                }
+            } catch (error) {
+                resultDiv.textContent = `❌ Connection Error:\n${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+        
+        // Auto-test on page load
+        window.onload = function() {
+            console.log('🧪 Backend test page loaded. Make sure backend is running on port 5001');
+        };
+    </script>
+</body>
+</html>

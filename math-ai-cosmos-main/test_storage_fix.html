@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Storage Quota Fix Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success { border-color: #4caf50; background-color: #e8f5e8; }
+        .error { border-color: #f44336; background-color: #ffebee; }
+        .info { border-color: #2196f3; background-color: #e3f2fd; }
+        button {
+            background: #2196f3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #1976d2; }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px 0;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Storage Quota Fix Test</h1>
+        <p>This page tests the localStorage quota fix implementation for the Math AI Cosmos application.</p>
+        
+        <div class="test-section info">
+            <h3>Test Controls</h3>
+            <button onclick="testBasicStorage()">Test Basic Storage</button>
+            <button onclick="testLargeData()">Test Large Data</button>
+            <button onclick="testCompression()">Test Compression</button>
+            <button onclick="testChunking()">Test Chunking</button>
+            <button onclick="clearAllData()">Clear All Data</button>
+            <button onclick="showStorageInfo()">Show Storage Info</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>Test Results</h3>
+            <div id="results"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>Console Log</h3>
+            <div id="log" class="log"></div>
+        </div>
+    </div>
+
+    <script>
+        // Mock the database class for testing
+        class MockHybridDatabase {
+            constructor() {
+                this.STORAGE_KEY = 'mathtutor_data';
+                this.COMPRESSED_KEY = 'mathtutor_data_compressed';
+                this.CHUNK_SIZE = 1000000; // 1MB chunks
+                this.MAX_CHUNKS = 10;
+            }
+
+            // Compression utility methods
+            compressData(data) {
+                try {
+                    // Remove unnecessary whitespace and use shorter property names
+                    const shortNames = {
+                        'createdAt': 'c',
+                        'lastLogin': 'l',
+                        'username': 'u',
+                        'email': 'e',
+                        'password': 'p',
+                        'role': 'r',
+                        'cadetAvatar': 'a',
+                        'teacherId': 't',
+                        'studentId': 's',
+                        'classroomId': 'cid',
+                        'joinCode': 'jc',
+                        'isActive': 'ia',
+                        'studentCount': 'sc',
+                        'completedAt': 'ca',
+                        'moduleId': 'mid',
+                        'moduleName': 'mn',
+                        'timeSpent': 'ts',
+                        'equationsSolved': 'es',
+                        'mistakes': 'm',
+                        'skillBreakdown': 'sb'
+                    };
+                    
+                    const compressed = JSON.stringify(data, (key, value) => {
+                        if (shortNames[key]) {
+                            return { [shortNames[key]]: value };
+                        }
+                        return value;
+                    });
+                    
+                    return compressed;
+                } catch (error) {
+                    console.warn('Compression failed, using original data:', error);
+                    return JSON.stringify(data);
+                }
+            }
+
+            decompressData(compressed) {
+                try {
+                    const parsed = JSON.parse(compressed);
+                    
+                    const longNames = {
+                        'c': 'createdAt',
+                        'l': 'lastLogin',
+                        'u': 'username',
+                        'e': 'email',
+                        'p': 'password',
+                        'r': 'role',
+                        'a': 'cadetAvatar',
+                        't': 'teacherId',
+                        's': 'studentId',
+                        'cid': 'classroomId',
+                        'jc': 'joinCode',
+                        'ia': 'isActive',
+                        'sc': 'studentCount',
+                        'ca': 'completedAt',
+                        'mid': 'moduleId',
+                        'mn': 'moduleName',
+                        'ts': 'timeSpent',
+                        'es': 'equationsSolved',
+                        'm': 'mistakes',
+                        'sb': 'skillBreakdown'
+                    };
+                    
+                    const restoreNames = (obj) => {
+                        if (typeof obj !== 'object' || obj === null) return obj;
+                        
+                        const restored = {};
+                        for (const [key, value] of Object.entries(obj)) {
+                            const longName = longNames[key] || key;
+                            restored[longName] = typeof value === 'object' ? restoreNames(value) : value;
+                        }
+                        return restored;
+                    };
+                    
+                    return restoreNames(parsed);
+                } catch (error) {
+                    console.warn('Decompression failed, trying original parse:', error);
+                    try {
+                        return JSON.parse(compressed);
+                    } catch {
+                        return {};
+                    }
+                }
+            }
+
+            chunkData(data) {
+                const chunks = [];
+                for (let i = 0; i < data.length; i += this.CHUNK_SIZE) {
+                    chunks.push(data.slice(i, i + this.CHUNK_SIZE));
+                }
+                return chunks;
+            }
+
+            saveChunkedData(data) {
+                try {
+                    const compressed = this.compressData(data);
+                    
+                    if (compressed.length <= this.CHUNK_SIZE) {
+                        // Data fits in single chunk, use regular storage
+                        localStorage.setItem(this.STORAGE_KEY, compressed);
+                        localStorage.removeItem(this.COMPRESSED_KEY);
+                        // Remove any existing chunks
+                        for (let i = 0; i < this.MAX_CHUNKS; i++) {
+                            localStorage.removeItem(`${this.COMPRESSED_KEY}_chunk_${i}`);
+                        }
+                        log(`Data saved in single chunk (${compressed.length} bytes)`);
+                    } else {
+                        // Data needs chunking
+                        const chunks = this.chunkData(compressed);
+                        
+                        if (chunks.length > this.MAX_CHUNKS) {
+                            log(`Data too large (${chunks.length} chunks), implementing cleanup strategy`);
+                            this.cleanupOldData(data);
+                            return;
+                        }
+                        
+                        // Store chunk metadata
+                        localStorage.setItem(this.COMPRESSED_KEY, JSON.stringify({
+                            chunkCount: chunks.length,
+                            totalSize: compressed.length,
+                            timestamp: Date.now()
+                        }));
+                        
+                        // Store chunks
+                        chunks.forEach((chunk, index) => {
+                            localStorage.setItem(`${this.COMPRESSED_KEY}_chunk_${index}`, chunk);
+                        });
+                        
+                        // Remove old single storage
+                        localStorage.removeItem(this.STORAGE_KEY);
+                        log(`Data saved in ${chunks.length} chunks (${compressed.length} bytes total)`);
+                    }
+                } catch (error) {
+                    log(`Failed to save chunked data: ${error.message}`);
+                    // Fallback to original method
+                    try {
+                        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
+                        log('Fallback storage succeeded');
+                    } catch (fallbackError) {
+                        log(`Fallback storage also failed: ${fallbackError.message}`);
+                        this.handleStorageQuotaError();
+                    }
+                }
+            }
+
+            loadChunkedData() {
+                try {
+                    // Check if we have chunked data
+                    const chunkedMeta = localStorage.getItem(this.COMPRESSED_KEY);
+                    
+                    if (chunkedMeta) {
+                        const meta = JSON.parse(chunkedMeta);
+                        const chunks = [];
+                        
+                        for (let i = 0; i < meta.chunkCount; i++) {
+                            const chunk = localStorage.getItem(`${this.COMPRESSED_KEY}_chunk_${i}`);
+                            if (chunk) {
+                                chunks.push(chunk);
+                            }
+                        }
+                        
+                        if (chunks.length === meta.chunkCount) {
+                            const compressed = chunks.join('');
+                            log(`Loaded data from ${chunks.length} chunks (${compressed.length} bytes total)`);
+                            return this.decompressData(compressed);
+                        }
+                    }
+                    
+                    // Fallback to regular storage
+                    const data = localStorage.getItem(this.STORAGE_KEY);
+                    if (data) {
+                        log(`Loaded data from single storage (${data.length} bytes)`);
+                        return this.decompressData(data);
+                    }
+                    
+                    return {};
+                } catch (error) {
+                    log(`Failed to load chunked data: ${error.message}`);
+                    return {};
+                }
+            }
+
+            cleanupOldData(currentData) {
+                try {
+                    log('Cleaning up old data to free storage space');
+                    
+                    // Keep only essential data, remove old progress and achievements
+                    const cleanedData = {
+                        users: currentData.users || [],
+                        teacherAccess: currentData.teacherAccess || [],
+                        studentProgress: (currentData.studentProgress || []).slice(-100), // Keep only last 100 entries
+                        classrooms: currentData.classrooms || {}
+                    };
+                    
+                    // Clear all existing storage
+                    localStorage.removeItem(this.STORAGE_KEY);
+                    localStorage.removeItem(this.COMPRESSED_KEY);
+                    for (let i = 0; i < this.MAX_CHUNKS; i++) {
+                        localStorage.removeItem(`${this.COMPRESSED_KEY}_chunk_${i}`);
+                    }
+                    
+                    // Save cleaned data
+                    this.saveChunkedData(cleanedData);
+                    
+                    log('Data cleanup completed');
+                } catch (error) {
+                    log(`Data cleanup failed: ${error.message}`);
+                }
+            }
+
+            handleStorageQuotaError() {
+                log('Storage quota exceeded, implementing emergency cleanup');
+                
+                // Emergency cleanup - remove all data and start fresh
+                try {
+                    localStorage.clear();
+                    log('Emergency storage cleanup completed');
+                } catch (error) {
+                    log(`Emergency cleanup failed: ${error.message}`);
+                }
+            }
+        }
+
+        const mockDb = new MockHybridDatabase();
+
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+
+        function showResults(message, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `test-section ${type}`;
+            div.innerHTML = message;
+            resultsDiv.appendChild(div);
+        }
+
+        function testBasicStorage() {
+            try {
+                const testData = {
+                    users: [{ id: '1', username: 'testuser', email: 'test@example.com' }],
+                    studentProgress: []
+                };
+                
+                mockDb.saveChunkedData(testData);
+                const loadedData = mockDb.loadChunkedData();
+                
+                if (JSON.stringify(loadedData) === JSON.stringify(testData)) {
+                    showResults('✅ Basic storage test passed! Data saved and loaded correctly.', 'success');
+                } else {
+                    showResults('❌ Basic storage test failed! Data mismatch detected.', 'error');
+                }
+            } catch (error) {
+                showResults(`❌ Basic storage test failed with error: ${error.message}`, 'error');
+            }
+        }
+
+        function testLargeData() {
+            try {
+                // Create large data that would exceed localStorage quota
+                const largeData = {
+                    users: Array.from({ length: 1000 }, (_, i) => ({
+                        id: `user_${i}`,
+                        username: `user${i}`,
+                        email: `user${i}@example.com`,
+                        createdAt: new Date().toISOString(),
+                        lastLogin: new Date().toISOString()
+                    })),
+                    studentProgress: Array.from({ length: 5000 }, (_, i) => ({
+                        id: `progress_${i}`,
+                        studentId: `student_${i % 100}`,
+                        moduleId: `module_${i % 10}`,
+                        completedAt: new Date().toISOString(),
+                        score: Math.random() * 100,
+                        timeSpent: Math.random() * 3600,
+                        equationsSolved: Math.floor(Math.random() * 50),
+                        mistakes: Math.floor(Math.random() * 10)
+                    }))
+                };
+                
+                const originalSize = JSON.stringify(largeData).length;
+                log(`Testing large data storage (${originalSize} bytes)`);
+                
+                mockDb.saveChunkedData(largeData);
+                const loadedData = mockDb.loadChunkedData();
+                
+                if (loadedData.users && loadedData.users.length === 1000) {
+                    showResults(`✅ Large data test passed! Successfully stored and loaded ${loadedData.users.length} users and ${loadedData.studentProgress.length} progress entries.`, 'success');
+                } else {
+                    showResults('❌ Large data test failed! Data not loaded correctly.', 'error');
+                }
+            } catch (error) {
+                showResults(`❌ Large data test failed with error: ${error.message}`, 'error');
+            }
+        }
+
+        function testCompression() {
+            try {
+                const testData = {
+                    users: [{ 
+                        id: '1', 
+                        username: 'testuser', 
+                        email: 'test@example.com',
+                        createdAt: new Date().toISOString(),
+                        lastLogin: new Date().toISOString(),
+                        role: 'student',
+                        cadetAvatar: 'king-sadboi'
+                    }]
+                };
+                
+                const original = JSON.stringify(testData);
+                const compressed = mockDb.compressData(testData);
+                const decompressed = mockDb.decompressData(compressed);
+                
+                const compressionRatio = ((original.length - compressed.length) / original.length * 100).toFixed(1);
+                
+                if (JSON.stringify(decompressed) === JSON.stringify(testData)) {
+                    showResults(`✅ Compression test passed! Data compressed by ${compressionRatio}% and restored correctly.`, 'success');
+                } else {
+                    showResults('❌ Compression test failed! Data not restored correctly.', 'error');
+                }
+            } catch (error) {
+                showResults(`❌ Compression test failed with error: ${error.message}`, 'error');
+            }
+        }
+
+        function testChunking() {
+            try {
+                // Create data that will definitely need chunking
+                const chunkData = {
+                    largeText: 'x'.repeat(2000000) // 2MB of data
+                };
+                
+                log('Testing chunking with 2MB data');
+                mockDb.saveChunkedData(chunkData);
+                
+                // Check if chunks were created
+                const meta = localStorage.getItem(mockDb.COMPRESSED_KEY);
+                if (meta) {
+                    const metaData = JSON.parse(meta);
+                    showResults(`✅ Chunking test passed! Data split into ${metaData.chunkCount} chunks.`, 'success');
+                } else {
+                    showResults('❌ Chunking test failed! No chunk metadata found.', 'error');
+                }
+            } catch (error) {
+                showResults(`❌ Chunking test failed with error: ${error.message}`, 'error');
+            }
+        }
+
+        function clearAllData() {
+            try {
+                localStorage.clear();
+                showResults('✅ All data cleared successfully.', 'success');
+                log('All localStorage data cleared');
+            } catch (error) {
+                showResults(`❌ Failed to clear data: ${error.message}`, 'error');
+            }
+        }
+
+        function showStorageInfo() {
+            try {
+                const totalSize = new Blob(Object.values(localStorage)).size;
+                const availableSpace = 5 * 1024 * 1024; // 5MB typical limit
+                const usedPercentage = ((totalSize / availableSpace) * 100).toFixed(1);
+                
+                const info = `
+                    <h4>Storage Information</h4>
+                    <p><strong>Total localStorage size:</strong> ${(totalSize / 1024 / 1024).toFixed(2)} MB</p>
+                    <p><strong>Storage usage:</strong> ${usedPercentage}%</p>
+                    <p><strong>Available space:</strong> ${((availableSpace - totalSize) / 1024 / 1024).toFixed(2)} MB</p>
+                    <p><strong>Number of keys:</strong> ${localStorage.length}</p>
+                `;
+                
+                showResults(info, 'info');
+            } catch (error) {
+                showResults(`❌ Failed to get storage info: ${error.message}`, 'error');
+            }
+        }
+
+        // Initialize
+        log('Storage Quota Fix Test initialized');
+        showResults('🚀 Ready to test the storage quota fix! Click the buttons above to run tests.', 'info');
+    </script>
+</body>
+</html>
+

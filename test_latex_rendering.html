@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LaTeX Rendering Test</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-case {
+            border: 1px solid #ccc;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .latex-input {
+            font-family: monospace;
+            background: #f5f5f5;
+            padding: 5px;
+            margin: 5px 0;
+        }
+        .rendered {
+            text-align: center;
+            margin: 10px 0;
+            padding: 10px;
+            background: #f9f9f9;
+        }
+        .error {
+            color: red;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <h1>LaTeX Rendering Test</h1>
+    <p>Testing various LaTeX expressions to ensure they render correctly:</p>
+
+    <div id="test-results"></div>
+
+    <script>
+        const testCases = [
+            {
+                name: 'Basic Fraction',
+                latex: '\\frac{1}{x}',
+                description: 'Simple fraction'
+            },
+            {
+                name: 'Complex Fraction',
+                latex: '\\frac{x+1}{x-1}',
+                description: 'Fraction with expressions'
+            },
+            {
+                name: 'Power',
+                latex: 'x^{2}',
+                description: 'Basic power'
+            },
+            {
+                name: 'Complex Power',
+                latex: 'x^{2}+2x+1',
+                description: 'Expression with power'
+            },
+            {
+                name: 'Rational Equation',
+                latex: '\\frac{x+2}{x-3}=\\frac{1}{2}',
+                description: 'Complete equation'
+            },
+            {
+                name: 'Multiple Fractions',
+                latex: '\\frac{x}{x+1}+\\frac{1}{x-1}=2',
+                description: 'Equation with multiple fractions'
+            },
+            {
+                name: 'Invalid LaTeX',
+                latex: '\\frac{1}{x} + \\invalid{command}',
+                description: 'Should show error'
+            }
+        ];
+
+        const resultsDiv = document.getElementById('test-results');
+
+        testCases.forEach((testCase, index) => {
+            const testDiv = document.createElement('div');
+            testDiv.className = 'test-case';
+            
+            testDiv.innerHTML = `
+                <h3>Test ${index + 1}: ${testCase.name}</h3>
+                <p><strong>Description:</strong> ${testCase.description}</p>
+                <p><strong>LaTeX Input:</strong></p>
+                <div class="latex-input">${testCase.latex}</div>
+                <p><strong>Rendered Output:</strong></p>
+                <div class="rendered" id="rendered-${index}"></div>
+            `;
+            
+            resultsDiv.appendChild(testDiv);
+            
+            // Try to render the LaTeX
+            try {
+                katex.render(testCase.latex, document.getElementById(`rendered-${index}`));
+            } catch (error) {
+                document.getElementById(`rendered-${index}`).innerHTML = 
+                    `<span class="error">Error: ${error.message}</span>`;
+            }
+        });
+
+        console.log('LaTeX rendering test completed!');
+    </script>
+</body>
+</html> 

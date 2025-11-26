@@ -30,7 +30,10 @@ import {
   Play,
   Eraser,
   Download,
-  Upload
+  Upload,
+  Volume2,
+  VolumeX,
+  Loader2
 } from 'lucide-react';
 
 const solutionModeLabels: Record<'raw' | 'process' | 'shortcut', string> = {
@@ -117,6 +120,242 @@ const CenteredLatex: React.FC<{ math: string }> = ({ math }) => (
   </div>
 );
 
+interface HighlightPattern {
+  regex: RegExp;
+  className: string;
+  priority: number;
+}
+
+const highlightPatterns: HighlightPattern[] = createHighlightPatterns();
+
+function createHighlightPatterns(): HighlightPattern[] {
+  return [
+    {
+      regex: new RegExp(String.raw`^(Final\s+(?:solution|answer|Answer):?\s*.*)`, 'i'),
+      className: 'text-yellow-300 font-bold',
+      priority: 0,
+    },
+    {
+      regex: new RegExp(String.raw`Final solution\(s\):\s*[^\n]*`, 'gi'),
+      className: 'text-yellow-300 font-bold',
+      priority: 0,
+    },
+    {
+      regex: new RegExp(String.raw`Final Answer:?\s*[^\n]*`, 'gi'),
+      className: 'text-yellow-300 font-bold',
+      priority: 0,
+    },
+    {
+      regex: new RegExp(String.raw`No (?:valid )?solution[s]?`, 'gi'),
+      className: 'text-red-300 font-semibold',
+      priority: 0,
+    },
+    {
+      regex: new RegExp(String.raw`(?:^|\s)(x\s*=\s*[^\n,;)]+)`, 'gi'),
+      className: 'text-green-400 font-semibold bg-green-400/20 px-1 rounded',
+      priority: 1,
+    },
+    {
+      regex: new RegExp(String.raw`(?:^|\s)(x\s*(?:!=|\u2260|<>|\\ne)\s*[^\n,;)]+)`, 'gi'),
+      className: 'text-orange-400 font-semibold bg-orange-400/30 px-1 rounded',
+      priority: 1,
+    },
+    {
+      regex: new RegExp(String.raw`LCD\s*[=:]\s*[^\n,;)]+`, 'gi'),
+      className: 'text-cyan-400 font-semibold bg-cyan-400/20 px-1 rounded',
+      priority: 1,
+    },
+    {
+      regex: new RegExp(String.raw`(?:Restrictions?|Excluded\s+(?:values?|solutions?|x-values?))[^\n]*`, 'gi'),
+      className: 'text-orange-400 font-semibold',
+      priority: 1,
+    },
+    {
+      regex: new RegExp(String.raw`(?:^|\s*•\s*)(Domain(?:\s+restrictions?)?\s*[:=]\s*[^\n]+)`, 'gi'),
+      className: 'text-amber-300 font-semibold',
+      priority: 1,
+    },
+    {
+      regex: new RegExp(String.raw`✓\s*Domain(?:\s+restrictions?)?:\s*[^\n]*`, 'gi'),
+      className: 'text-amber-300 font-semibold',
+      priority: 1,
+    },
+    {
+      regex: new RegExp(String.raw`(?:Valid|Extraneous)\s+solutions?\s*[:=]?\s*[^\n]*`, 'gi'),
+      className: 'text-pink-400 font-semibold',
+      priority: 1,
+    },
+    {
+      regex: new RegExp(String.raw`(?:^|\s*•\s*)(?:Zeros?|Roots?)\s*[:=]\s*[^\n]+`, 'gi'),
+      className: 'text-emerald-300 font-semibold',
+      priority: 2,
+    },
+    {
+      regex: new RegExp(String.raw`(?:^|\s*•\s*)(X-?intercepts?)\s*[:=]\s*[^\n]+`, 'gi'),
+      className: 'text-emerald-300 font-semibold',
+      priority: 2,
+    },
+    {
+      regex: new RegExp(String.raw`(?:^|\s*•\s*)(Y-?intercepts?)\s*[:=]\s*[^\n]+`, 'gi'),
+      className: 'text-emerald-300 font-semibold',
+      priority: 2,
+    },
+    {
+      regex: new RegExp(String.raw`Vertical asymptotes?\s*[:=]\s*[^\n]+`, 'gi'),
+      className: 'text-rose-300 font-semibold',
+      priority: 2,
+    },
+    {
+      regex: new RegExp(String.raw`VA:\s*x\s*=\s*[^\n]+`, 'gi'),
+      className: 'text-rose-300 font-semibold',
+      priority: 2,
+    },
+    {
+      regex: new RegExp(String.raw`Horizontal asymptote[s]?\s*[:=]\s*[^\n]+`, 'gi'),
+      className: 'text-rose-300 font-semibold',
+      priority: 2,
+    },
+    {
+      regex: new RegExp(String.raw`Oblique asymptote[s]?\s*[:=]\s*[^\n]+`, 'gi'),
+      className: 'text-rose-300 font-semibold',
+      priority: 2,
+    },
+    {
+      regex: new RegExp(String.raw`Holes?\s*[:=]\s*[^\n]+`, 'gi'),
+      className: 'text-orange-300 font-semibold',
+      priority: 2,
+    },
+    {
+      regex: new RegExp(String.raw`•\s*Hole at[^\n]+`, 'gi'),
+      className: 'text-orange-300 font-semibold',
+      priority: 2,
+    },
+    {
+      regex: new RegExp(String.raw`End behavior\s*[:=]?\s*[^\n]+`, 'gi'),
+      className: 'text-sky-300 font-semibold',
+      priority: 3,
+    },
+    {
+      regex: new RegExp(String.raw`Common factors cancelled\s*[:=]?\s*[^\n]*`, 'gi'),
+      className: 'text-teal-300 font-semibold',
+      priority: 3,
+    },
+    {
+      regex: new RegExp(String.raw`Simplified\s*[:=]\s*[^\n]+`, 'gi'),
+      className: 'text-teal-300 font-semibold',
+      priority: 3,
+    },
+    {
+      regex: new RegExp(String.raw`Factored\s*[:=]\s*[^\n]+`, 'gi'),
+      className: 'text-teal-300 font-semibold',
+      priority: 3,
+    },
+    {
+      regex: new RegExp(String.raw`Original\s*[:=]\s*[^\n]+`, 'gi'),
+      className: 'text-teal-200 font-semibold',
+      priority: 3,
+    },
+    {
+      regex: new RegExp(String.raw`Final checklist`, 'gi'),
+      className: 'text-yellow-200 font-semibold',
+      priority: 4,
+    },
+    {
+      regex: new RegExp(String.raw`✓\s*[^\n]*`, 'g'),
+      className: 'text-yellow-200 font-semibold',
+      priority: 4,
+    },
+    {
+      regex: new RegExp(String.raw`(?:Verify|Check|Verification|Substitute)\s+[^\n]+`, 'gi'),
+      className: 'text-blue-400 font-semibold',
+      priority: 4,
+    },
+    {
+      regex: new RegExp(String.raw`\b(LCD|Least Common Denominator|extraneous|valid solution|no solution)\b`, 'gi'),
+      className: 'text-pink-400 font-semibold',
+      priority: 4,
+    },
+    {
+      regex: new RegExp(String.raw`^(Step\s+\d+[:\-]?\s*[^\n]*)`, 'i'),
+      className: 'text-purple-400 font-bold',
+      priority: 5,
+    },
+  ];
+}
+
+const HighlightedSolution: React.FC<{ text?: string | null }> = ({ text }) => {
+  if (!text) return null;
+
+  const lines = text.split('\n');
+
+  return (
+    <pre className="whitespace-pre-wrap text-sm font-mono text-gray-200">
+      {lines.map((line, lineIndex) => {
+        if (!line.trim()) {
+          return <React.Fragment key={lineIndex}>{'\n'}</React.Fragment>;
+        }
+
+        const highlights = highlightPatterns.reduce<Array<{ start: number; end: number; className: string; priority: number }>>((acc, pattern) => {
+          const regex = new RegExp(pattern.regex.source, pattern.regex.flags.includes('g') ? pattern.regex.flags : `${pattern.regex.flags}g`);
+          for (const match of line.matchAll(regex)) {
+            if (match.index !== undefined) {
+              acc.push({
+                start: match.index,
+                end: match.index + match[0].length,
+                className: pattern.className,
+                priority: pattern.priority,
+              });
+            }
+          }
+          return acc;
+        }, []);
+
+        highlights.sort((a, b) => {
+          if (a.start !== b.start) return a.start - b.start;
+          return a.priority - b.priority;
+        });
+
+        const compact: typeof highlights = [];
+        highlights.forEach((match) => {
+          const last = compact[compact.length - 1];
+          if (!last || match.start >= last.end) {
+            compact.push(match);
+          } else if (match.priority < last.priority) {
+            compact[compact.length - 1] = match;
+          }
+        });
+
+        const fragments: React.ReactNode[] = [];
+        let cursor = 0;
+        let keyCounter = 0;
+
+        compact.forEach((match) => {
+          if (match.start > cursor) {
+            fragments.push(<span key={`txt-${lineIndex}-${keyCounter++}`}>{line.slice(cursor, match.start)}</span>);
+          }
+          fragments.push(
+            <span key={`hl-${lineIndex}-${keyCounter++}`} className={match.className}>
+              {line.slice(match.start, match.end)}
+            </span>
+          );
+          cursor = match.end;
+        });
+
+        if (cursor < line.length) {
+          fragments.push(<span key={`txt-${lineIndex}-${keyCounter++}`}>{line.slice(cursor)}</span>);
+        }
+
+        return (
+          <React.Fragment key={lineIndex}>
+            {fragments.length > 0 ? fragments : line}
+            {'\n'}
+          </React.Fragment>
+        );
+      })}
+    </pre>
+  );
+};
+
 interface DrawingSolverProps {
   className?: string;
 }
@@ -197,12 +436,57 @@ const DrawingSolver: React.FC<DrawingSolverProps> = ({ className }) => {
   const [studentSteps, setStudentSteps] = useState('');
   const [processedStrokeCount, setProcessedStrokeCount] = useState(0);
   const [rationalAnalysis, setRationalAnalysis] = useState<any>(null);
+  
+  // TTS state
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isGeneratingTTS, setIsGeneratingTTS] = useState(false);
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
 
   const primaryOcrResult = ocrResults.length > 0 ? ocrResults[0] : null;
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const manualInputRef = useRef<HTMLInputElement>(null);
   const prettyInputRef = useRef<HTMLInputElement>(null);
+
+  // Memoize star data for performance - generate once and reuse
+  const starData = useMemo(() => {
+    const generateStars = (count: number, type: 'bright' | 'medium' | 'tiny' | 'constellation') => {
+      return Array.from({ length: count }, (_, i) => {
+        const randomX = Math.random() * 100;
+        const randomY = Math.random() * 100;
+        const randomDelay = Math.random() * (type === 'tiny' ? 4 : type === 'constellation' ? 3 : 5);
+        const randomDuration = type === 'bright' 
+          ? 3 + Math.random() * 2 
+          : type === 'medium' 
+          ? 2 + Math.random() * 3 
+          : type === 'constellation'
+          ? 2 + Math.random() * 2
+          : 2 + Math.random() * 2;
+        
+        if (type === 'bright') {
+          const starSize = Math.random() * 2 + 1.5;
+          return { randomX, randomY, randomDelay, randomDuration, starSize, type: 'bright' as const };
+        } else if (type === 'medium') {
+          const starSize = Math.random() * 1.2 + 0.8;
+          const starColor = Math.random();
+          return { randomX, randomY, randomDelay, randomDuration, starSize, starColor, type: 'medium' as const };
+        } else if (type === 'constellation') {
+          const starType = Math.random();
+          return { randomX, randomY, randomDelay, randomDuration, starType, type: 'constellation' as const };
+        } else {
+          return { randomX, randomY, randomDelay, randomDuration, type: 'tiny' as const };
+        }
+      });
+    };
+
+    return {
+      bright: generateStars(8, 'bright'),
+      medium: generateStars(15, 'medium'),
+      tiny: generateStars(12, 'tiny'),
+      constellation: generateStars(8, 'constellation'),
+    };
+  }, []); // Empty deps - generate once on mount
 
   const deferredPrettyInput = useDeferredValue(prettyInput);
   const latexPreview = useMemo(() => simpleToLatex(deferredPrettyInput), [deferredPrettyInput]);
@@ -527,31 +811,13 @@ const DrawingSolver: React.FC<DrawingSolverProps> = ({ className }) => {
       const formData = new FormData();
       formData.append('image', blob, 'drawing-step.png');
 
-      // Create a timeout promise
-      const timeoutPromise = new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error('Request timeout. Please check your network connection and try again.')), 30000)
-      );
-
-      // Race between fetch and timeout
-      const ocrResponse = await Promise.race([
-        fetch(`${API_BASE}/api/ocr/process`, {
-          method: 'POST',
-          body: formData,
-        }),
-        timeoutPromise
-      ]) as Response;
+      const ocrResponse = await fetch(`${API_BASE}/api/ocr/process`, {
+        method: 'POST',
+        body: formData,
+      });
 
       if (!ocrResponse.ok) {
-        // Try to get error message from response
-        let errorMessage = 'OCR processing failed';
-        try {
-          const errorData = await ocrResponse.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch {
-          // If can't parse error, use status text
-          errorMessage = `OCR processing failed: ${ocrResponse.statusText || 'Unknown error'}`;
-        }
-        throw new Error(errorMessage);
+        throw new Error('OCR processing failed');
       }
 
       const ocrData = (await ocrResponse.json()) as OCRResult;
@@ -589,22 +855,7 @@ const DrawingSolver: React.FC<DrawingSolverProps> = ({ className }) => {
         setTimeout(() => setShowConfetti(false), 1500);
       }
     } catch (err) {
-      // Provide more specific error messages for network issues
-      let errorMessage = 'Unknown error';
-      if (err instanceof Error) {
-        if (err.message.includes('timeout') || err.message.includes('Timeout')) {
-          errorMessage = 'Network timeout. Please check your internet connection and try again.';
-        } else if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
-          errorMessage = 'Network connection failed. Please check your internet connection and ensure the backend server is running.';
-        } else if (err.message.includes('Network connection')) {
-          errorMessage = err.message;
-        } else {
-          errorMessage = `OCR processing error: ${err.message}`;
-        }
-      } else {
-        errorMessage = `OCR processing error: ${String(err)}`;
-      }
-      setError(errorMessage);
+      setError(`OCR processing error: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setIsProcessing(false);
     }
@@ -864,6 +1115,148 @@ const DrawingSolver: React.FC<DrawingSolverProps> = ({ className }) => {
     );
   };
 
+  // TTS generation function
+  const generateTTS = async (text: string) => {
+    if (!text || text.trim().length === 0) {
+      setError('No text available for TTS generation');
+      return;
+    }
+
+    setIsGeneratingTTS(true);
+    try {
+      // Clean up previous audio
+      if (audioElement) {
+        audioElement.pause();
+        audioElement.src = '';
+        setIsPlaying(false);
+      }
+      if (audioUrl) {
+        URL.revokeObjectURL(audioUrl);
+        setAudioUrl(null);
+      }
+
+      // Clean text for TTS - remove markdown formatting, code blocks, teacher voice markers, etc.
+      let cleanText = text
+        .replace(/```[\s\S]*?```/g, '') // Remove code blocks but preserve content
+        .replace(/`([^`]+)`/g, '$1') // Remove inline code markers but keep text
+        .replace(/\*\*TEACHER'S\s+VOICE:\*\*/gi, '') // Remove teacher voice markers
+        .replace(/TEACHER'S\s+VOICE:/gi, '') // Remove teacher voice markers
+        .replace(/TEACHER'S\s+VOICE/gi, '') // Remove teacher voice markers
+        .replace(/INSTRUCTION:/gi, '') // Remove instruction markers
+        .replace(/\*\*([^*]+)\*\*/g, '$1') // Remove bold markers
+        .replace(/\*([^*]+)\*/g, '$1') // Remove italic markers
+        .replace(/#{1,6}\s+/g, '') // Remove header markers
+        .replace(/---+/g, '\n') // Convert horizontal rules to line breaks
+        .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1') // Remove links but keep text
+        .replace(/\n{3,}/g, '\n\n') // Normalize excessive line breaks
+        .trim();
+
+      // Remove LaTeX expressions (they won't read well) but keep the meaning
+      cleanText = cleanText.replace(/\\[a-zA-Z]+\{[^}]*\}/g, '');
+      cleanText = cleanText.replace(/\$[^$]+\$/g, '');
+      
+      // Add natural pauses using ellipses and line breaks for better speech flow
+      // Add pause indicators after step numbers
+      cleanText = cleanText.replace(/(Step\s+\d+[:\-])/gi, '$1...');
+      // Add pause before important results using ellipses
+      cleanText = cleanText.replace(/(answer|solution|result|equals?|is\s+equal\s+to)/gi, '... $1');
+      // Add natural breaks after colons
+      cleanText = cleanText.replace(/:\s+/g, ': ... ');
+      // Add breaks before equations (look for patterns like "x = " or numbers)
+      cleanText = cleanText.replace(/([.!?])\s*([A-Z])/g, '$1 ... $2');
+
+      const response = await fetch(`${API_BASE}/api/tts/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: cleanText,
+          tone: 'energetic_teaching',
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || 'TTS generation failed');
+      }
+
+      const data = await response.json();
+      if (!data.success || !data.audio) {
+        throw new Error(data.error || 'No audio data received');
+      }
+
+      // Convert base64 to blob and create audio URL
+      const binaryString = atob(data.audio);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const blob = new Blob([bytes], { type: 'audio/wav' });
+      const url = URL.createObjectURL(blob);
+      
+      setAudioUrl(url);
+      
+      // Create and configure audio element
+      const audio = new Audio(url);
+      audio.onended = () => {
+        setIsPlaying(false);
+      };
+      audio.onerror = (e) => {
+        console.error('Audio playback error:', e);
+        setIsPlaying(false);
+        setError('Audio playback failed');
+      };
+      
+      setAudioElement(audio);
+      
+      // Auto-play
+      await audio.play();
+      setIsPlaying(true);
+    } catch (err) {
+      console.error('TTS generation error:', err);
+      setError(`TTS error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setIsGeneratingTTS(false);
+    }
+  };
+
+  // TTS playback controls
+  const toggleAudioPlayback = () => {
+    if (!audioElement) {
+      // Generate TTS if not available
+      const textToRead = rationalAnalysis?.raw_output || solutionResult?.solution || '';
+      if (textToRead) {
+        generateTTS(textToRead);
+      }
+      return;
+    }
+
+    if (isPlaying) {
+      audioElement.pause();
+      setIsPlaying(false);
+    } else {
+      audioElement.play().catch(err => {
+        console.error('Playback error:', err);
+        setError('Failed to play audio');
+      });
+      setIsPlaying(true);
+    }
+  };
+
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      if (audioElement) {
+        audioElement.pause();
+        audioElement.src = '';
+      }
+      if (audioUrl) {
+        URL.revokeObjectURL(audioUrl);
+      }
+    };
+  }, [audioElement, audioUrl]);
+
   const renderSteps = (steps?: string[]) => {
     if (!steps || steps.length === 0) {
       return null;
@@ -872,7 +1265,7 @@ const DrawingSolver: React.FC<DrawingSolverProps> = ({ className }) => {
       <div className="mt-4 space-y-2">
         {steps.map((step, index) => (
           <div key={index} className="rounded border border-slate-700/60 bg-slate-900/70 p-3 text-sm font-mono whitespace-pre-wrap">
-            {step}
+            <HighlightedSolution text={step} />
           </div>
         ))}
       </div>
@@ -932,6 +1325,22 @@ const DrawingSolver: React.FC<DrawingSolverProps> = ({ className }) => {
             <Button
               variant="outline"
               size="sm"
+              onClick={toggleAudioPlayback}
+              disabled={isGeneratingTTS}
+              title={isGeneratingTTS ? "Generating audio..." : isPlaying ? "Pause audio" : "Play audio"}
+            >
+              {isGeneratingTTS ? (
+                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+              ) : isPlaying ? (
+                <VolumeX className="w-4 h-4 mr-1" />
+              ) : (
+                <Volume2 className="w-4 h-4 mr-1" />
+              )}
+              {isGeneratingTTS ? "Generating..." : isPlaying ? "Pause" : "Listen"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setIsSolutionFullscreen(true)}
             >
               <Play className="w-4 h-4 mr-1" /> Fullscreen
@@ -965,9 +1374,7 @@ const DrawingSolver: React.FC<DrawingSolverProps> = ({ className }) => {
             )
           ) : (
             <>
-              <pre className="whitespace-pre-wrap text-sm font-mono text-gray-200">
-                {solutionResult.solution}
-              </pre>
+              <HighlightedSolution text={solutionResult.solution} />
               {renderSteps(solutionResult.steps)}
             </>
           )}
@@ -1191,16 +1598,403 @@ const DrawingSolver: React.FC<DrawingSolverProps> = ({ className }) => {
                       </motion.div>
                     )}
 
-                    <div className="border-2 border-dashed border-slate-500 rounded-lg p-3 sm:p-4">
-                      <canvas
-                        ref={canvasRef}
-                          className="w-full h-72 sm:h-80 lg:h-80 bg-white rounded touch-none select-none cursor-crosshair"
+                    {/* Optimized Galaxy Border - Performance Enhanced */}
+                    <div className="relative rounded-xl p-[4px] overflow-hidden"
+                         style={{
+                           background: 'radial-gradient(ellipse at center, rgba(99, 102, 241, 0.5) 0%, rgba(139, 92, 246, 0.4) 20%, rgba(79, 70, 229, 0.35) 40%, rgba(30, 27, 75, 0.5) 65%, rgba(15, 23, 42, 0.8) 100%)',
+                           boxShadow: 'inset 0 0 60px rgba(139, 92, 246, 0.3), 0 0 40px rgba(99, 102, 241, 0.2)',
+                         }}>
+                      
+                      {/* Optimized Galaxy Core Glow - Using CSS for better performance */}
+                      <div
+                        className="absolute inset-0 rounded-xl galaxy-core-glow"
+                        style={{
+                          background: 'radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.12) 0%, rgba(192, 132, 252, 0.18) 15%, rgba(139, 92, 246, 0.22) 30%, transparent 60%)',
+                          filter: 'blur(20px)',
+                          willChange: 'opacity, transform',
+                          transform: 'translateZ(0)',
+                        }}
+                      />
+                      
+                      {/* Optimized Primary Nebula - Consolidated and simplified */}
+                      <div
+                        className="absolute inset-0 rounded-xl nebula-primary"
+                        style={{
+                          background: `
+                            radial-gradient(ellipse 85% 50% at 15% 25%, rgba(168, 85, 247, 0.5) 0%, rgba(139, 92, 246, 0.35) 30%, transparent 55%),
+                            radial-gradient(ellipse 70% 45% at 85% 75%, rgba(59, 130, 246, 0.45) 0%, rgba(37, 99, 235, 0.3) 35%, transparent 60%),
+                            radial-gradient(ellipse 75% 55% at 50% 50%, rgba(236, 72, 153, 0.35) 0%, rgba(219, 39, 119, 0.2) 40%, transparent 65%)
+                          `,
+                          filter: 'blur(18px)',
+                          mixBlendMode: 'screen',
+                          willChange: 'transform',
+                          transform: 'translateZ(0)',
+                        }}
+                      />
+                      
+                      {/* Optimized Spiral Galaxy Arms - Single layer with CSS animation */}
+                      <div
+                        className="absolute inset-0 rounded-xl spiral-arm"
+                        style={{
+                          background: 'conic-gradient(from 0deg at 50% 50%, transparent 0deg, rgba(168, 85, 247, 0.35) 45deg, transparent 90deg, rgba(59, 130, 246, 0.3) 135deg, transparent 180deg, rgba(236, 72, 153, 0.25) 225deg, transparent 270deg, rgba(168, 85, 247, 0.3) 315deg, transparent 360deg)',
+                          filter: 'blur(15px)',
+                          mixBlendMode: 'screen',
+                          willChange: 'transform',
+                          transform: 'translateZ(0)',
+                        }}
+                      />
+                      
+                      {/* Optimized Counter-rotating spiral - CSS animation */}
+                      <div
+                        className="absolute inset-0 rounded-xl spiral-counter"
+                        style={{
+                          background: 'conic-gradient(from 180deg at 50% 50%, transparent 0deg, rgba(139, 92, 246, 0.2) 60deg, transparent 120deg, rgba(37, 99, 235, 0.18) 180deg, transparent 240deg, rgba(219, 39, 119, 0.15) 300deg, transparent 360deg)',
+                          filter: 'blur(16px)',
+                          opacity: 0.5,
+                          willChange: 'transform',
+                          transform: 'translateZ(0)',
+                        }}
+                      />
+                      
+                      {/* Optimized Star Field - Reduced count and CSS animations with memoized data */}
+                      <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none z-0">
+                        {/* Large Bright Stars - Reduced from 15 to 8 */}
+                        {starData.bright.map((star, i) => (
+                          <div
+                            key={`bright-${i}`}
+                            className="absolute rounded-full star-large"
+                            style={{
+                              width: `${star.starSize}px`,
+                              height: `${star.starSize}px`,
+                              left: `${star.randomX}%`,
+                              top: `${star.randomY}%`,
+                              background: 'radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(192, 132, 252, 0.6) 50%, transparent 100%)',
+                              boxShadow: '0 0 8px 2px rgba(255,255,255,0.8), 0 0 15px 4px rgba(168, 85, 247, 0.6)',
+                              animation: `starTwinkle ${star.randomDuration}s ease-in-out ${star.randomDelay}s infinite`,
+                              willChange: 'opacity, transform',
+                              transform: 'translateZ(0)',
+                            }}
+                          />
+                        ))}
+                        
+                        {/* Medium Stars - Reduced from 35 to 15 */}
+                        {starData.medium.map((star, i) => (
+                          <div
+                            key={`medium-${i}`}
+                            className="absolute rounded-full star-medium"
+                            style={{
+                              width: `${star.starSize}px`,
+                              height: `${star.starSize}px`,
+                              left: `${star.randomX}%`,
+                              top: `${star.randomY}%`,
+                              background: star.starColor > 0.5
+                                ? 'radial-gradient(circle, rgba(255,255,255,0.85) 0%, rgba(168, 85, 247, 0.5) 60%, transparent 100%)'
+                                : 'radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(59, 130, 246, 0.45) 60%, transparent 100%)',
+                              boxShadow: star.starColor > 0.5
+                                ? '0 0 5px 1px rgba(255,255,255,0.6), 0 0 10px 3px rgba(168, 85, 247, 0.5)'
+                                : '0 0 4px 1px rgba(255,255,255,0.5), 0 0 8px 2px rgba(59, 130, 246, 0.4)',
+                              animation: `starTwinkle ${star.randomDuration}s ease-in-out ${star.randomDelay}s infinite`,
+                              willChange: 'opacity, transform',
+                              transform: 'translateZ(0)',
+                            }}
+                          />
+                        ))}
+                        
+                        {/* Tiny Sparkle Stars - Reduced from 40 to 12, static with minimal animation */}
+                        {starData.tiny.map((star, i) => (
+                          <div
+                            key={`tiny-${i}`}
+                            className="absolute rounded-full star-tiny"
+                            style={{
+                              width: '0.5px',
+                              height: '0.5px',
+                              left: `${star.randomX}%`,
+                              top: `${star.randomY}%`,
+                              background: 'rgba(255, 255, 255, 0.8)',
+                              boxShadow: '0 0 2px 1px rgba(168, 85, 247, 0.5)',
+                              animation: `starTwinkle ${star.randomDuration}s ease-in-out ${star.randomDelay}s infinite`,
+                              willChange: 'opacity',
+                              transform: 'translateZ(0)',
+                            }}
+                          />
+                        ))}
+                      </div>
+                      
+                      {/* Simplified Cosmic Dust - Single layer with CSS */}
+                      <div
+                        className="absolute inset-0 rounded-xl cosmic-dust"
+                        style={{
+                          background: 'conic-gradient(from 45deg, transparent 0deg, rgba(168, 85, 247, 0.2) 80deg, transparent 160deg, rgba(59, 130, 246, 0.18) 240deg, transparent 320deg, rgba(236, 72, 153, 0.15) 360deg)',
+                          filter: 'blur(20px)',
+                          mixBlendMode: 'screen',
+                          opacity: 0.4,
+                          willChange: 'transform',
+                          transform: 'translateZ(0)',
+                        }}
+                      />
+
+                      {/* Inner container with enhanced galaxy border */}
+                      <div className="relative rounded-lg p-3 sm:p-4 bg-slate-950/98 backdrop-blur-xl border-2"
+                           style={{
+                             borderImage: 'linear-gradient(135deg, rgba(168, 85, 247, 0.9), rgba(139, 92, 246, 0.85), rgba(59, 130, 246, 0.9), rgba(236, 72, 153, 0.85), rgba(168, 85, 247, 0.9)) 1',
+                             borderImageSlice: 1,
+                             boxShadow: 'inset 0 0 30px rgba(139, 92, 246, 0.2), 0 0 20px rgba(99, 102, 241, 0.15)',
+                           }}>
+                        {/* Optimized border glow - CSS animation */}
+                        <div
+                          className="absolute -inset-[4px] rounded-lg border-glow"
+                          style={{
+                            background: 'radial-gradient(ellipse at center, rgba(168, 85, 247, 0.6) 0%, rgba(139, 92, 246, 0.45) 25%, rgba(59, 130, 246, 0.35) 50%, rgba(236, 72, 153, 0.25) 75%, transparent 100%)',
+                            filter: 'blur(10px)',
+                            willChange: 'opacity, transform',
+                            transform: 'translateZ(0)',
+                          }}
+                        />
+                        
+                        {/* Optimized outer glow ring - CSS animation */}
+                        <div
+                          className="absolute -inset-[2px] rounded-lg glow-ring"
+                          style={{
+                            background: 'conic-gradient(from 0deg, rgba(168, 85, 247, 0.5), rgba(59, 130, 246, 0.5), rgba(236, 72, 153, 0.5), rgba(168, 85, 247, 0.5))',
+                            filter: 'blur(6px)',
+                            borderRadius: '0.75rem',
+                            willChange: 'transform',
+                            transform: 'translateZ(0)',
+                          }}
+                        />
+                        
+                        {/* Simplified border gradient - Static with subtle animation */}
+                        <div
+                          className="absolute inset-0 rounded-lg pointer-events-none border-gradient"
+                          style={{
+                            border: '2px solid transparent',
+                            background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.6), rgba(139, 92, 246, 0.55), rgba(59, 130, 246, 0.6), rgba(236, 72, 153, 0.55), rgba(168, 85, 247, 0.6))',
+                            backgroundSize: '200% 200%',
+                            WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                            WebkitMaskComposite: 'xor',
+                            maskComposite: 'exclude',
+                            padding: '2px',
+                            willChange: 'background-position',
+                            transform: 'translateZ(0)',
+                          }}
+                        />
+                        
+                        {/* Simplified shimmer effect - CSS animation */}
+                        <div
+                          className="absolute inset-0 rounded-lg pointer-events-none core-shimmer"
+                          style={{
+                            background: 'radial-gradient(ellipse 200% 100% at 50% 50%, transparent 0%, rgba(192, 132, 252, 0.4) 25%, rgba(168, 85, 247, 0.3) 35%, transparent 55%)',
+                            mixBlendMode: 'screen',
+                            opacity: 0.5,
+                            willChange: 'opacity',
+                            transform: 'translateZ(0)',
+                          }}
+                        />
+                        
+                        {/* Optimized inner constellation stars - Reduced from 20 to 8 */}
+                        <div className="absolute inset-0 rounded-lg overflow-hidden pointer-events-none">
+                          {starData.constellation.map((star, i) => (
+                            <div
+                              key={`constellation-${i}`}
+                              className="absolute rounded-full constellation-star"
+                              style={{
+                                width: star.starType > 0.6 ? '1.2px' : '0.8px',
+                                height: star.starType > 0.6 ? '1.2px' : '0.8px',
+                                left: `${star.randomX}%`,
+                                top: `${star.randomY}%`,
+                                background: star.starType > 0.6
+                                  ? 'radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(192, 132, 252, 0.6) 100%)'
+                                  : 'rgba(255, 255, 255, 0.8)',
+                                boxShadow: star.starType > 0.6
+                                  ? '0 0 3px 1px rgba(192, 132, 252, 0.7), 0 0 6px 2px rgba(168, 85, 247, 0.5)'
+                                  : '0 0 2px 1px rgba(168, 85, 247, 0.6)',
+                                animation: `starTwinkle ${star.randomDuration}s ease-in-out ${star.randomDelay}s infinite`,
+                                willChange: 'opacity',
+                                transform: 'translateZ(0)',
+                              }}
+                            />
+                          ))}
+                        </div>
+                        
+                        {/* Subtle inner glow */}
+                        <div className="absolute inset-0 rounded-lg pointer-events-none"
+                             style={{
+                               background: 'radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.1) 0%, transparent 70%)',
+                               filter: 'blur(15px)',
+                             }}
+                        />
+                        
+                        <canvas
+                          ref={canvasRef}
+                          className="relative w-full h-72 sm:h-80 lg:h-80 bg-white rounded touch-none select-none cursor-crosshair z-10 shadow-2xl"
+                          style={{
+                            boxShadow: '0 0 20px rgba(139, 92, 246, 0.1)',
+                          }}
                           onPointerDown={startDrawing}
                           onPointerMove={draw}
                           onPointerUp={stopDrawing}
                           onPointerCancel={stopDrawing}
-                      />
+                        />
+                      </div>
                     </div>
+                    
+                    {/* Optimized CSS animations for galaxy effects - GPU accelerated */}
+                    <style>{`
+                      /* Galaxy core pulse - simplified */
+                      .galaxy-core-glow {
+                        animation: galaxyCorePulse 6s ease-in-out infinite;
+                      }
+                      
+                      /* Nebula flow - subtle movement */
+                      .nebula-primary {
+                        animation: nebulaFlow 18s ease-in-out infinite;
+                      }
+                      
+                      /* Spiral arm rotation - GPU accelerated */
+                      .spiral-arm {
+                        animation: spiralRotate 25s linear infinite;
+                      }
+                      
+                      /* Counter-rotating spiral */
+                      .spiral-counter {
+                        animation: spiralCounterRotate 30s linear infinite;
+                      }
+                      
+                      /* Cosmic dust rotation */
+                      .cosmic-dust {
+                        animation: cosmicDustRotate 28s linear infinite;
+                      }
+                      
+                      /* Border glow pulse */
+                      .border-glow {
+                        animation: borderGlowPulse 5s ease-in-out infinite;
+                      }
+                      
+                      /* Glow ring rotation */
+                      .glow-ring {
+                        animation: glowRingRotate 10s linear infinite;
+                      }
+                      
+                      /* Border gradient animation */
+                      .border-gradient {
+                        animation: borderGradientMove 10s linear infinite;
+                      }
+                      
+                      /* Core shimmer */
+                      .core-shimmer {
+                        animation: coreShimmer 8s ease-in-out infinite;
+                      }
+                      
+                      @keyframes galaxyCorePulse {
+                        0%, 100% {
+                          opacity: 0.4;
+                          transform: translateZ(0) scale(0.98);
+                        }
+                        50% {
+                          opacity: 0.65;
+                          transform: translateZ(0) scale(1.02);
+                        }
+                      }
+                      
+                      @keyframes nebulaFlow {
+                        0% {
+                          transform: translateZ(0) translate(0, 0) scale(1) rotate(0deg);
+                        }
+                        33% {
+                          transform: translateZ(0) translate(1px, -1px) scale(1.03) rotate(1.5deg);
+                        }
+                        66% {
+                          transform: translateZ(0) translate(-0.5px, 1px) scale(0.99) rotate(-0.8deg);
+                        }
+                        100% {
+                          transform: translateZ(0) translate(0, 0) scale(1) rotate(0deg);
+                        }
+                      }
+                      
+                      @keyframes spiralRotate {
+                        from {
+                          transform: translateZ(0) rotate(0deg);
+                        }
+                        to {
+                          transform: translateZ(0) rotate(360deg);
+                        }
+                      }
+                      
+                      @keyframes spiralCounterRotate {
+                        from {
+                          transform: translateZ(0) rotate(360deg);
+                        }
+                        to {
+                          transform: translateZ(0) rotate(0deg);
+                        }
+                      }
+                      
+                      @keyframes cosmicDustRotate {
+                        from {
+                          transform: translateZ(0) rotate(0deg);
+                          opacity: 0.3;
+                        }
+                        50% {
+                          opacity: 0.45;
+                        }
+                        to {
+                          transform: translateZ(0) rotate(-360deg);
+                          opacity: 0.3;
+                        }
+                      }
+                      
+                      @keyframes borderGlowPulse {
+                        0%, 100% {
+                          opacity: 0.5;
+                          transform: translateZ(0) scale(1);
+                        }
+                        50% {
+                          opacity: 0.75;
+                          transform: translateZ(0) scale(1.04);
+                        }
+                      }
+                      
+                      @keyframes glowRingRotate {
+                        from {
+                          transform: translateZ(0) rotate(0deg);
+                        }
+                        to {
+                          transform: translateZ(0) rotate(360deg);
+                        }
+                      }
+                      
+                      @keyframes borderGradientMove {
+                        0% {
+                          background-position: 0% 0%;
+                        }
+                        50% {
+                          background-position: 100% 100%;
+                        }
+                        100% {
+                          background-position: 0% 0%;
+                        }
+                      }
+                      
+                      @keyframes coreShimmer {
+                        0%, 100% {
+                          opacity: 0.4;
+                        }
+                        50% {
+                          opacity: 0.65;
+                        }
+                      }
+                      
+                      @keyframes starTwinkle {
+                        0%, 100% {
+                          opacity: 0.2;
+                          transform: translateZ(0) scale(0.8);
+                        }
+                        50% {
+                          opacity: 0.9;
+                          transform: translateZ(0) scale(1.1);
+                        }
+                      }
+                    `}</style>
                     
                       <div className="flex flex-wrap gap-2">
                         <Button variant="outline" className="flex-1 min-w-[140px]" onClick={clearCanvas}>
@@ -1568,15 +2362,33 @@ const DrawingSolver: React.FC<DrawingSolverProps> = ({ className }) => {
                               <Zap className="w-5 h-5 text-green-400" />
                               Rational Function Analysis
                             </h4>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                navigator.clipboard.writeText(rationalAnalysis.raw_output || '').catch(() => undefined);
-                              }}
-                            >
-                              <Upload className="w-4 h-4 mr-1" /> Copy
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={toggleAudioPlayback}
+                                disabled={isGeneratingTTS}
+                                title={isGeneratingTTS ? "Generating audio..." : isPlaying ? "Pause audio" : "Play audio"}
+                              >
+                                {isGeneratingTTS ? (
+                                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                                ) : isPlaying ? (
+                                  <VolumeX className="w-4 h-4 mr-1" />
+                                ) : (
+                                  <Volume2 className="w-4 h-4 mr-1" />
+                                )}
+                                {isGeneratingTTS ? "Generating..." : isPlaying ? "Pause" : "Listen"}
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(rationalAnalysis.raw_output || '').catch(() => undefined);
+                                }}
+                              >
+                                <Upload className="w-4 h-4 mr-1" /> Copy
+                              </Button>
+                            </div>
                           </div>
                           
                           {/* Graph Display */}
@@ -1598,9 +2410,7 @@ const DrawingSolver: React.FC<DrawingSolverProps> = ({ className }) => {
                           {/* Text Output */}
                           <div className="bg-gradient-to-br from-slate-700/70 to-slate-800/80 border border-slate-600 rounded-xl p-4 max-h-96 overflow-auto space-y-4">
                             {rationalAnalysis.raw_output ? (
-                              <pre className="whitespace-pre-wrap text-sm font-mono text-gray-200 leading-relaxed">
-                                {rationalAnalysis.raw_output}
-                              </pre>
+                              <HighlightedSolution text={rationalAnalysis.raw_output} />
                             ) : (
                               <div className="text-sm text-gray-300">
                                 No analysis output available.
@@ -2049,9 +2859,7 @@ const DrawingSolver: React.FC<DrawingSolverProps> = ({ className }) => {
                       </div>
                     ) : (
                       <>
-                        <pre className="whitespace-pre-wrap text-lg font-mono text-gray-200 leading-relaxed">
-                          {viewingSolution.solution}
-                        </pre>
+                        <HighlightedSolution text={viewingSolution.solution} />
                         {renderSteps(viewingSolution.steps)}
                       </>
                     )}
@@ -2109,9 +2917,7 @@ const DrawingSolver: React.FC<DrawingSolverProps> = ({ className }) => {
                       </div>
                     ) : (
                       <>
-                        <pre className="whitespace-pre-wrap text-lg font-mono text-gray-200 leading-relaxed">
-                          {solutionResult.solution}
-                        </pre>
+                        <HighlightedSolution text={solutionResult.solution} />
                         {renderSteps(solutionResult.steps)}
                       </>
                     )}

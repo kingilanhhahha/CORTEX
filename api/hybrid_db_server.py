@@ -273,9 +273,49 @@ def get_progress(student_id):
     conn = connect()
     cur = conn.cursor()
     cur.execute('SELECT * FROM student_progress WHERE studentId = ?', (student_id,))
-    rows = [dict(r) for r in cur.fetchall()]
+    rows = cur.fetchall()
     conn.close()
-    return jsonify(rows)
+    
+    # Parse payload JSON and merge with row data
+    result = []
+    for row in rows:
+        row_dict = dict(row)
+        # Parse payload if it exists
+        if row_dict.get('payload'):
+            try:
+                payload = json.loads(row_dict['payload'])
+                # Extract fields from payload
+                if isinstance(payload, dict):
+                    # Handle old format where payload contains meta
+                    if 'meta' in payload:
+                        meta = payload['meta']
+                        row_dict.update({
+                            'equationsSolved': meta.get('equationsSolved', payload.get('equationsSolved', [])),
+                            'mistakes': meta.get('mistakes', payload.get('mistakes', [])),
+                            'skillBreakdown': meta.get('skillBreakdown', payload.get('skillBreakdown')),
+                            'commonMistakes': meta.get('commonMistakes', []),
+                            'strengths': meta.get('strengths', []),
+                            'areasForImprovement': meta.get('areasForImprovement', []),
+                            'difficultyLevel': meta.get('difficultyLevel'),
+                        })
+                    else:
+                        # Direct payload format
+                        row_dict.update({
+                            'equationsSolved': payload.get('equationsSolved', []),
+                            'mistakes': payload.get('mistakes', []),
+                            'skillBreakdown': payload.get('skillBreakdown'),
+                            'commonMistakes': payload.get('commonMistakes', []),
+                            'strengths': payload.get('strengths', []),
+                            'areasForImprovement': payload.get('areasForImprovement', []),
+                            'difficultyLevel': payload.get('difficultyLevel'),
+                        })
+            except (json.JSONDecodeError, TypeError) as e:
+                print(f"Error parsing payload: {e}")
+                # Keep payload as is if parsing fails
+        
+        result.append(row_dict)
+    
+    return jsonify(result)
 
 
 @app.route('/api/progress', methods=['POST'])
@@ -284,10 +324,22 @@ def create_progress():
     required = ['studentId', 'moduleId', 'moduleName', 'completedAt']
     if not all(k in data for k in required):
         return jsonify({ 'error': 'missing fields' }), 400
+    
+    # Build payload JSON with all metadata
+    payload_data = {
+        'equationsSolved': data.get('equationsSolved', []),
+        'mistakes': data.get('mistakes', []),
+        'skillBreakdown': data.get('skillBreakdown', {}),
+        'commonMistakes': data.get('commonMistakes', []),
+        'strengths': data.get('strengths', []),
+        'areasForImprovement': data.get('areasForImprovement', []),
+        'difficultyLevel': data.get('difficultyLevel'),
+    }
+    
     conn = connect()
     cur = conn.cursor()
     cur.execute('INSERT INTO student_progress (id, studentId, moduleId, moduleName, completedAt, score, timeSpent, payload) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-                ('id_' + uuid.uuid4().hex, data['studentId'], data['moduleId'], data['moduleName'], data['completedAt'], data.get('score'), data.get('timeSpent'), data.get('payload')))
+                ('id_' + uuid.uuid4().hex, data['studentId'], data['moduleId'], data['moduleName'], data['completedAt'], data.get('score'), data.get('timeSpent'), json.dumps(payload_data)))
     conn.commit()
     conn.close()
     return jsonify({ 'ok': True })
@@ -340,6 +392,15 @@ def batch_progress():
         # Save lesson completion if any
         if 'lesson_completion' in data:
             lesson = data['lesson_completion']
+            payload_data = {
+                'equationsSolved': lesson.get('equationsSolved', []),
+                'mistakes': lesson.get('mistakes', []),
+                'skillBreakdown': lesson.get('skillBreakdown', {}),
+                'commonMistakes': lesson.get('commonMistakes', []),
+                'strengths': lesson.get('strengths', []),
+                'areasForImprovement': lesson.get('areasForImprovement', []),
+                'difficultyLevel': lesson.get('difficultyLevel'),
+            }
             cur.execute('''
                 INSERT INTO student_progress 
                 (id, studentId, moduleId, moduleName, completedAt, score, timeSpent, payload)
@@ -352,11 +413,7 @@ def batch_progress():
                 now_iso(),
                 lesson['score'],
                 lesson['timeSpent'],
-                json.dumps({
-                    'equationsSolved': lesson.get('equationsSolved', []),
-                    'mistakes': lesson.get('mistakes', []),
-                    'skillBreakdown': lesson.get('skillBreakdown', {})
-                })
+                json.dumps(payload_data)
             ))
         
         conn.commit()

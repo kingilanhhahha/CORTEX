@@ -33,6 +33,7 @@ import {
 import 'katex/dist/katex.min.css';
 import { InlineMath, BlockMath } from 'react-katex';
 import { db } from '@/lib/database';
+import { analyzeAreasForImprovement, analyzeStrengths, analyzeCommonMistakes } from '@/utils/progressAnalysis';
 
 const uranusBg = new URL('../../planet background/uranus.webp', import.meta.url).href;
 
@@ -83,6 +84,12 @@ const UranusLesson: React.FC = () => {
       const total = equationsSolved.length + mistakes.length;
       const score = total > 0 ? Math.round((equationsSolved.length / total) * 100) : 0;
       const minutes = Math.max(1, Math.round((Date.now() - startRef.current) / 60000));
+      
+      // Analyze areas for improvement, strengths, and common mistakes
+      const areasForImprovement = analyzeAreasForImprovement(mistakes);
+      const strengths = analyzeStrengths(equationsSolved);
+      const commonMistakes = analyzeCommonMistakes(mistakes);
+      
       await db.saveStudentProgress({
         studentId: user?.id || 'guest',
         moduleId: 'lesson-uranus',
@@ -93,6 +100,9 @@ const UranusLesson: React.FC = () => {
         equationsSolved,
         mistakes,
         skillBreakdown: skills,
+        areasForImprovement: areasForImprovement,
+        strengths: strengths,
+        commonMistakes: commonMistakes,
       } as any);
       toast({ title: 'Saved', description: 'Your Uranus lesson results were saved.' });
     } catch (e) {
@@ -117,13 +127,17 @@ const UranusLesson: React.FC = () => {
       [questionId]: true
     }));
 
+    // Track equationsSolved and mistakes with meaningful descriptions
     if (isCorrect) {
+      setEquationsSolved(prev => [...prev, `Creative Applications: Question ${questionId} - Correctly solved`]);
       toast({
         title: "Correct! 🎉",
         description: "Brilliant! You understand creative applications.",
         variant: "default",
       });
     } else {
+      const mistakeDescription = `Creative Applications: Question ${questionId} - ${explanation || 'Incorrect answer. Need to review creative application steps'}`;
+      setMistakes(prev => [...prev, mistakeDescription]);
       toast({
         title: "Not quite right 📚",
         description: "Review the explanation to master this concept.",
@@ -179,7 +193,49 @@ const UranusLesson: React.FC = () => {
   };
 
   const handleFinishLesson = async () => {
+    if (!user?.id) {
+      toast({
+        title: "Please Log In",
+        description: "You need to be logged in to save your progress.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     try {
+      // Calculate skill breakdown from quiz answers
+      const answers = Object.values(questionsAnswered);
+      const totalQuestions = answers.length;
+      const correctAnswers = answers.filter(a => a.correct).length;
+      
+      // Update skills based on quiz performance
+      const updatedSkills = {
+        creativeApplications: {
+          correct: correctAnswers,
+          total: totalQuestions
+        },
+        problemSolving: {
+          correct: correctAnswers,
+          total: totalQuestions
+        },
+        restrictions: {
+          correct: 0,
+          total: 0
+        },
+        lcdFinding: {
+          correct: 0,
+          total: 0
+        },
+        factoring: {
+          correct: 0,
+          total: 0
+        },
+        algebra: {
+          correct: correctAnswers,
+          total: totalQuestions
+        }
+      };
+      
       // Use the optimized lesson completion function
       const success = await completeLesson(user.id, {
         lessonId: 'uranus-lesson',
@@ -188,7 +244,7 @@ const UranusLesson: React.FC = () => {
         timeSpent: Math.max(1, Math.round((Date.now() - startRef.current) / 60000)),
         equationsSolved,
         mistakes,
-        skillBreakdown: skills,
+        skillBreakdown: updatedSkills,
         xpEarned: 450,
         planetName: 'Uranus',
       });

@@ -376,3 +376,6 @@ If you encounter issues:
 3. Check console/terminal for error messages
 4. Ensure ports 5000 and 5173 are not in use by other applications
 
+
+
+

@@ -59,11 +59,15 @@ def send_to_simpletex(image_path, token, api_url=SIMPLETEX_API_URL, timeout=20, 
                         raise RuntimeError("No 'latex' field returned by SimpleTex.")
                     return latex
                     
-                except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
+                except (requests.exceptions.ConnectionError, 
+                        requests.exceptions.Timeout,
+                        requests.exceptions.SSLError,
+                        requests.exceptions.ChunkedEncodingError,
+                        requests.exceptions.ProxyError) as e:
                     # Network-related errors - retry if we have attempts left
                     last_error = e
                     if attempt < max_retries - 1:
-                        print(f"[DEBUG] Network error (attempt {attempt + 1}/{max_retries}): {e}. Retrying...")
+                        print(f"[DEBUG] Network error (attempt {attempt + 1}/{max_retries}): {type(e).__name__}: {e}. Retrying...")
                         time.sleep(1)  # Wait 1 second before retry
                         continue
                     else:
@@ -73,18 +77,54 @@ def send_to_simpletex(image_path, token, api_url=SIMPLETEX_API_URL, timeout=20, 
                             error_msg += "Please check your internet connection."
                         elif isinstance(e, requests.exceptions.Timeout):
                             error_msg += "Request timed out. The server may be slow or unreachable."
+                        elif isinstance(e, requests.exceptions.SSLError):
+                            error_msg += "SSL connection error. Please check your network connection."
+                        else:
+                            error_msg += "Network error occurred. Please check your internet connection."
                         raise RuntimeError(error_msg) from e
                 except requests.exceptions.RequestException as e:
-                    # Other request errors - don't retry
-                    raise RuntimeError(f"SimpleTex API error: {e}") from e
+                    # Other request errors - check if it's network-related
+                    error_str = str(e).lower()
+                    if any(keyword in error_str for keyword in ['connection', 'network', 'timeout', 'dns', 'socket', 'ssl']):
+                        # It's a network-related error, retry
+                        last_error = e
+                        if attempt < max_retries - 1:
+                            print(f"[DEBUG] Network-related error (attempt {attempt + 1}/{max_retries}): {e}. Retrying...")
+                            time.sleep(1)
+                            continue
+                        else:
+                            raise RuntimeError(f"Network connection failed after {max_retries} attempts. Please check your internet connection.") from e
+                    else:
+                        # Other request errors - don't retry
+                        raise RuntimeError(f"SimpleTex API error: {e}") from e
                     
         except FileNotFoundError:
             # File error - don't retry
             raise RuntimeError(f"Image file not found: {image_path}")
+        except (OSError, IOError) as e:
+            # OS-level errors that might be network-related (DNS, socket errors, etc.)
+            error_str = str(e).lower()
+            if any(keyword in error_str for keyword in ['connection', 'network', 'timeout', 'dns', 'socket', 'name resolution', 'unreachable']):
+                last_error = e
+                if attempt < max_retries - 1:
+                    print(f"[DEBUG] OS-level network error (attempt {attempt + 1}/{max_retries}): {e}. Retrying...")
+                    time.sleep(1)
+                    continue
+                else:
+                    raise RuntimeError(f"Network connection failed after {max_retries} attempts. Please check your internet connection.") from e
+            else:
+                # Other OS errors - don't retry
+                raise RuntimeError(f"System error: {e}") from e
         except Exception as e:
-            # Unexpected errors - don't retry
-            if attempt < max_retries - 1 and isinstance(e, RuntimeError) and "Network" in str(e):
-                continue  # Retry network errors
+            # Unexpected errors - check if it's network-related
+            error_str = str(e).lower()
+            if any(keyword in error_str for keyword in ['connection', 'network', 'timeout', 'dns', 'socket', 'ssl']):
+                last_error = e
+                if attempt < max_retries - 1:
+                    print(f"[DEBUG] Unexpected network error (attempt {attempt + 1}/{max_retries}): {e}. Retrying...")
+                    time.sleep(1)
+                    continue
+            # Don't retry other unexpected errors
             raise
     
     # If we get here, all retries failed

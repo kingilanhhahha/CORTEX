@@ -98,6 +98,92 @@ const TeacherDashboard: React.FC = () => {
     return allProgress.filter(p => p.studentId === studentId);
   };
 
+  // Helper function to get aggregated areas for improvement for a student
+  const getAggregatedAreasForImprovement = (studentId: string): string[] => {
+    const progress = getStudentProgress(studentId);
+    const allAreas: string[] = [];
+    
+    progress.forEach(p => {
+      if (p.areasForImprovement && Array.isArray(p.areasForImprovement)) {
+        allAreas.push(...p.areasForImprovement);
+      }
+    });
+    
+    // Count occurrences and return top areas
+    const areaCounts: { [key: string]: number } = {};
+    allAreas.forEach(area => {
+      areaCounts[area] = (areaCounts[area] || 0) + 1;
+    });
+    
+    return Object.entries(areaCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5)
+      .map(([area]) => area);
+  };
+
+  // Helper function to get classroom-wide areas for improvement
+  const getClassroomAreasForImprovement = (): string[] => {
+    const allAreas: string[] = [];
+    
+    students.forEach(student => {
+      const progress = getStudentProgress(student.id);
+      progress.forEach(p => {
+        if (p.areasForImprovement && Array.isArray(p.areasForImprovement)) {
+          allAreas.push(...p.areasForImprovement);
+        }
+      });
+    });
+    
+    // Count occurrences and return top areas
+    const areaCounts: { [key: string]: number } = {};
+    allAreas.forEach(area => {
+      areaCounts[area] = (areaCounts[area] || 0) + 1;
+    });
+    
+    return Object.entries(areaCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5)
+      .map(([area]) => area);
+  };
+
+  // Helper function to get aggregated strengths for a student
+  const getAggregatedStrengths = (studentId: string): string[] => {
+    const progress = getStudentProgress(studentId);
+    const allStrengths: string[] = [];
+    
+    progress.forEach(p => {
+      if (p.strengths && Array.isArray(p.strengths)) {
+        allStrengths.push(...p.strengths);
+      }
+    });
+    
+    // Count occurrences and return top strengths
+    const strengthCounts: { [key: string]: number } = {};
+    allStrengths.forEach(strength => {
+      strengthCounts[strength] = (strengthCounts[strength] || 0) + 1;
+    });
+    
+    return Object.entries(strengthCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5)
+      .map(([strength]) => strength);
+  };
+
+  // Helper function to get aggregated common mistakes for a student
+  const getAggregatedCommonMistakes = (studentId: string): string[] => {
+    const progress = getStudentProgress(studentId);
+    const allMistakes: string[] = [];
+    
+    progress.forEach(p => {
+      if (p.commonMistakes && Array.isArray(p.commonMistakes)) {
+        allMistakes.push(...p.commonMistakes);
+      }
+    });
+    
+    // Return unique mistakes (they're already formatted with counts)
+    return [...new Set(allMistakes)].slice(0, 5);
+  };
+
   const getAverageScore = (studentId: string) => {
     const progress = getStudentProgress(studentId);
     if (progress.length === 0) return 0;
@@ -494,6 +580,35 @@ const TeacherDashboard: React.FC = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4 }}
                 >
+                  {/* Classroom-Wide Insights */}
+                  {students.length > 0 && getClassroomAreasForImprovement().length > 0 && (
+                    <Card className="bg-gradient-card border-primary/30 mb-6">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-primary">
+                          <Target size={20} />
+                          Classroom-Wide Insights
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          <div>
+                            <h4 className="text-sm font-medium text-card-foreground mb-3">Most Common Areas for Improvement</h4>
+                            <div className="bg-blue-500/10 rounded-lg p-4">
+                              <ul className="space-y-2">
+                                {getClassroomAreasForImprovement().map((area, index) => (
+                                  <li key={index} className="text-sm text-muted-foreground flex items-start gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
+                                    <span>{area}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
                   <Card className="bg-gradient-card border-primary/30">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-primary">
@@ -743,71 +858,84 @@ const TeacherDashboard: React.FC = () => {
                                 </div>
                               </div>
 
-                              {/* Common Mistakes Pattern */}
+                              {/* Common Mistakes Pattern - Aggregated */}
                               <div>
                                 <h5 className="text-sm font-medium text-card-foreground mb-2">Common Mistakes Pattern</h5>
                                 <div className="space-y-2">
-                                  {getStudentProgress(selectedStudent.id).map(progress => 
-                                    progress.commonMistakes && progress.commonMistakes.length > 0
-                                  ).some(Boolean) ? (
-                                    getStudentProgress(selectedStudent.id)
-                                      .filter(progress => progress.commonMistakes && progress.commonMistakes.length > 0)
-                                      .slice(0, 2)
-                                      .map((progress, index) => (
-                                        <div key={index} className="bg-warning/10 rounded-lg p-3">
-                                          <div className="flex justify-between items-center mb-2">
-                                            <span className="text-xs font-medium text-warning">{progress.moduleName}</span>
-                                            <span className="text-xs text-muted-foreground">
-                                    {new Date(progress.completedAt).toLocaleDateString()}
-                                  </span>
-                                          </div>
-                                          <ul className="space-y-1">
-                                            {progress.commonMistakes!.slice(0, 3).map((mistake, mistakeIndex) => (
-                                              <li key={mistakeIndex} className="text-xs text-muted-foreground flex items-start gap-2">
-                                                <div className="w-1 h-1 rounded-full bg-warning mt-2 flex-shrink-0" />
-                                                <span className="truncate">{mistake}</span>
-                                              </li>
-                                            ))}
-                                          </ul>
-                                        </div>
-                                      ))
+                                  {selectedStudent && getAggregatedCommonMistakes(selectedStudent.id).length > 0 ? (
+                                    <div className="bg-warning/10 rounded-lg p-3">
+                                      <div className="flex justify-between items-center mb-2">
+                                        <span className="text-xs font-medium text-warning">Across All Lessons</span>
+                                        <span className="text-xs text-muted-foreground">
+                                          {getStudentProgress(selectedStudent.id).length} lesson{getStudentProgress(selectedStudent.id).length !== 1 ? 's' : ''}
+                                        </span>
+                                      </div>
+                                      <ul className="space-y-1">
+                                        {getAggregatedCommonMistakes(selectedStudent.id).map((mistake, mistakeIndex) => (
+                                          <li key={mistakeIndex} className="text-xs text-muted-foreground flex items-start gap-2">
+                                            <div className="w-1 h-1 rounded-full bg-warning mt-2 flex-shrink-0" />
+                                            <span className="truncate">{mistake}</span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
                                   ) : (
                                     <p className="text-xs text-muted-foreground italic">No common mistake patterns identified yet</p>
                                   )}
                                 </div>
                               </div>
 
-                              {/* Areas for Improvement */}
+                              {/* Strengths - Aggregated */}
+                              <div>
+                                <h5 className="text-sm font-medium text-card-foreground mb-2">Student Strengths</h5>
+                                <div className="space-y-2">
+                                  {selectedStudent && getAggregatedStrengths(selectedStudent.id).length > 0 ? (
+                                    <div className="bg-green-500/10 rounded-lg p-3">
+                                      <div className="flex justify-between items-center mb-2">
+                                        <span className="text-xs font-medium text-green-500">Across All Lessons</span>
+                                        <span className="text-xs text-muted-foreground">
+                                          {getStudentProgress(selectedStudent.id).length} lesson{getStudentProgress(selectedStudent.id).length !== 1 ? 's' : ''}
+                                        </span>
+                                      </div>
+                                      <ul className="space-y-1">
+                                        {getAggregatedStrengths(selectedStudent.id).map((strength, strengthIndex) => (
+                                          <li key={strengthIndex} className="text-xs text-muted-foreground flex items-start gap-2">
+                                            <div className="w-1 h-1 rounded-full bg-green-500 mt-2 flex-shrink-0" />
+                                            <span className="truncate">{strength}</span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  ) : (
+                                    <p className="text-xs text-muted-foreground italic">No strengths identified yet</p>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Areas for Improvement - Aggregated */}
                               <div>
                                 <h5 className="text-sm font-medium text-card-foreground mb-2">Areas for Improvement</h5>
                                 <div className="space-y-2">
-                                  {getStudentProgress(selectedStudent.id).map(progress => 
-                                    progress.areasForImprovement && progress.areasForImprovement.length > 0
-                                  ).some(Boolean) ? (
-                                    getStudentProgress(selectedStudent.id)
-                                      .filter(progress => progress.areasForImprovement && progress.areasForImprovement.length > 0)
-                                      .slice(0, 1)
-                                      .map((progress, index) => (
-                                        <div key={index} className="bg-blue-500/10 rounded-lg p-3">
-                                          <div className="flex justify-between items-center mb-2">
-                                            <span className="text-xs font-medium text-blue-500">{progress.moduleName}</span>
-                                            <span className="text-xs text-muted-foreground">
-                                              {new Date(progress.completedAt).toLocaleDateString()}
-                                            </span>
-                                          </div>
-                                          <ul className="space-y-1">
-                                            {progress.areasForImprovement!.slice(0, 3).map((area, areaIndex) => (
-                                              <li key={areaIndex} className="text-xs text-muted-foreground flex items-start gap-2">
-                                                <div className="w-1 h-1 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
-                                                <span className="truncate">{area}</span>
-                                              </li>
-                                      ))}
-                                    </ul>
-                                  </div>
-                                      ))
+                                  {selectedStudent && getAggregatedAreasForImprovement(selectedStudent.id).length > 0 ? (
+                                    <div className="bg-blue-500/10 rounded-lg p-3">
+                                      <div className="flex justify-between items-center mb-2">
+                                        <span className="text-xs font-medium text-blue-500">Across All Lessons</span>
+                                        <span className="text-xs text-muted-foreground">
+                                          {getStudentProgress(selectedStudent.id).length} lesson{getStudentProgress(selectedStudent.id).length !== 1 ? 's' : ''}
+                                        </span>
+                                      </div>
+                                      <ul className="space-y-1">
+                                        {getAggregatedAreasForImprovement(selectedStudent.id).map((area, areaIndex) => (
+                                          <li key={areaIndex} className="text-xs text-muted-foreground flex items-start gap-2">
+                                            <div className="w-1 h-1 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
+                                            <span className="truncate">{area}</span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
                                   ) : (
                                     <p className="text-xs text-muted-foreground italic">No specific areas for improvement identified yet</p>
-                                )}
+                                  )}
                                 </div>
                               </div>
                             </div>

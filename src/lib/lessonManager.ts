@@ -1,4 +1,5 @@
 import { db } from './database';
+import { analyzeAreasForImprovement, analyzeStrengths, analyzeCommonMistakes } from '@/utils/progressAnalysis';
 
 export interface Lesson {
   id: string;
@@ -318,6 +319,13 @@ export class LessonManager {
         lastAttempt: new Date()
       };
 
+      // Analyze areas for improvement, strengths, and common mistakes
+      const allMistakes = updatedProgress.mistakes || [];
+      const allEquationsSolved: string[] = []; // Empty for now since updateLessonProgress doesn't receive equationsSolved
+      const areasForImprovement = allMistakes.length > 0 ? analyzeAreasForImprovement(allMistakes) : [];
+      const strengths = allEquationsSolved.length > 0 ? analyzeStrengths(allEquationsSolved) : [];
+      const commonMistakes = allMistakes.length > 0 ? analyzeCommonMistakes(allMistakes) : [];
+
       // Update in database
       await db.saveStudentProgress({
         studentId,
@@ -326,7 +334,7 @@ export class LessonManager {
         completedAt: updatedProgress.completedAt,
         score: updatedProgress.score,
         timeSpent: updatedProgress.timeSpent,
-        equationsSolved: [],
+        equationsSolved: allEquationsSolved,
         mistakes: updatedProgress.mistakes,
         skillBreakdown: {
           restrictions: { correct: 1, total: 1 },
@@ -335,7 +343,10 @@ export class LessonManager {
           extraneousSolutions: { correct: 1, total: 1 },
           factoring: { correct: 1, total: 1 },
           algebra: { correct: 1, total: 1 }
-        }
+        },
+        areasForImprovement: areasForImprovement,
+        strengths: strengths,
+        commonMistakes: commonMistakes,
       });
 
       console.log(`Progress updated for lesson ${lessonId}: ${status}`);

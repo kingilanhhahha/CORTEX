@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { db, getProgress, upsertProgress, enqueueOffline, syncOfflineProgress, ProgressPayload, saveAchievement, getAchievementStats, Achievement, AchievementStats } from '@/lib/database';
+import { analyzeAreasForImprovement, analyzeStrengths, analyzeCommonMistakes } from '@/utils/progressAnalysis';
 
 export type CadetAvatarId = 'marisse' | 'charmelle' | 'chriselle' | 'king' | 'jeremiah';
 
@@ -155,6 +156,11 @@ export const PlayerProvider: React.FC<React.PropsWithChildren> = ({ children }) 
 				planetName: lessonData.planetName,
 			});
 			
+			// Analyze areas for improvement, strengths, and common mistakes
+			const areasForImprovement = analyzeAreasForImprovement(lessonData.mistakes);
+			const strengths = analyzeStrengths(lessonData.equationsSolved);
+			const commonMistakes = analyzeCommonMistakes(lessonData.mistakes);
+			
 			// Save lesson completion to database
 			await db.saveStudentProgress({
 				studentId: userId,
@@ -166,6 +172,9 @@ export const PlayerProvider: React.FC<React.PropsWithChildren> = ({ children }) 
 				equationsSolved: lessonData.equationsSolved,
 				mistakes: lessonData.mistakes,
 				skillBreakdown: lessonData.skillBreakdown,
+				areasForImprovement: areasForImprovement,
+				strengths: strengths,
+				commonMistakes: commonMistakes,
 			} as any);
 			
 			// Update progress to 100%

@@ -337,10 +337,21 @@ class HybridDatabase {
   async saveStudentProgress(progress: Omit<StudentProgress, 'id'>): Promise<StudentProgress> {
     if (HAS_API) {
       try {
+        // Send all fields directly - backend will handle payload creation
         await apiPost('/api/progress', {
-          ...progress,
+          studentId: progress.studentId,
+          moduleId: progress.moduleId,
+          moduleName: progress.moduleName,
           completedAt: (progress.completedAt as any)?.toISOString?.() || new Date(progress.completedAt).toISOString(),
-          payload: JSON.stringify({ equationsSolved: progress.equationsSolved, mistakes: progress.mistakes, meta: progress }),
+          score: progress.score,
+          timeSpent: progress.timeSpent,
+          equationsSolved: progress.equationsSolved || [],
+          mistakes: progress.mistakes || [],
+          skillBreakdown: progress.skillBreakdown || {},
+          commonMistakes: progress.commonMistakes || [],
+          strengths: progress.strengths || [],
+          areasForImprovement: progress.areasForImprovement || [],
+          difficultyLevel: progress.difficultyLevel,
         });
         return { ...progress, id: 'remote' } as any;
       } catch (e) {
@@ -358,7 +369,8 @@ class HybridDatabase {
     if (HAS_API) {
       try {
         const list = await apiGet<any[]>(`/api/progress/by-student/${studentId}`);
-        return list.map((p) => ({ ...p, completedAt: new Date(p.completedAt) }));
+        // Parse each progress item to extract payload fields
+        return list.map((p) => this.parseStudentProgress(p));
       } catch (e) {
         if (!this.shouldFallback(e)) throw e;
       }
@@ -763,7 +775,62 @@ class HybridDatabase {
     return { ...a, grantedAt: new Date(a.grantedAt) };
   }
   private parseStudentProgress(p: any): StudentProgress {
-    return { ...p, completedAt: new Date(p.completedAt) };
+    const progress: StudentProgress = {
+      ...p,
+      completedAt: new Date(p.completedAt),
+    };
+    
+    // Parse payload if it exists and fields are missing
+    if (p.payload && typeof p.payload === 'string') {
+      try {
+        const payload = JSON.parse(p.payload);
+        
+        // Extract fields from payload if not already in progress object
+        if (payload.equationsSolved && !progress.equationsSolved) {
+          progress.equationsSolved = payload.equationsSolved;
+        }
+        if (payload.mistakes && !progress.mistakes) {
+          progress.mistakes = payload.mistakes;
+        }
+        if (payload.skillBreakdown && !progress.skillBreakdown) {
+          progress.skillBreakdown = payload.skillBreakdown;
+        }
+        if (payload.commonMistakes && !progress.commonMistakes) {
+          progress.commonMistakes = payload.commonMistakes;
+        }
+        if (payload.strengths && !progress.strengths) {
+          progress.strengths = payload.strengths;
+        }
+        if (payload.areasForImprovement && !progress.areasForImprovement) {
+          progress.areasForImprovement = payload.areasForImprovement;
+        }
+        if (payload.difficultyLevel && !progress.difficultyLevel) {
+          progress.difficultyLevel = payload.difficultyLevel;
+        }
+        
+        // Handle old format where payload contains meta
+        if (payload.meta) {
+          const meta = payload.meta;
+          if (meta.equationsSolved) progress.equationsSolved = meta.equationsSolved;
+          if (meta.mistakes) progress.mistakes = meta.mistakes;
+          if (meta.skillBreakdown) progress.skillBreakdown = meta.skillBreakdown;
+          if (meta.commonMistakes) progress.commonMistakes = meta.commonMistakes;
+          if (meta.strengths) progress.strengths = meta.strengths;
+          if (meta.areasForImprovement) progress.areasForImprovement = meta.areasForImprovement;
+          if (meta.difficultyLevel) progress.difficultyLevel = meta.difficultyLevel;
+        }
+      } catch (e) {
+        console.error('Error parsing progress payload:', e);
+      }
+    }
+    
+    // Also handle if backend already parsed and returned fields directly
+    // (after backend fix, these will be top-level properties)
+    if (p.commonMistakes) progress.commonMistakes = p.commonMistakes;
+    if (p.strengths) progress.strengths = p.strengths;
+    if (p.areasForImprovement) progress.areasForImprovement = p.areasForImprovement;
+    
+    return progress;
   }
 
   async testConnection(): Promise<boolean> {

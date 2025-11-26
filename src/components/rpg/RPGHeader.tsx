@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { usePlayer } from '@/contexts/PlayerContext';
 import MusicSettings from '@/components/ui/MusicSettings';
+import cortexLogo from '@/cortex  logo.png';
 
 interface RPGHeaderProps {
   playerName?: string;
@@ -46,9 +47,11 @@ const RPGHeader: React.FC<RPGHeaderProps> = ({
             className="flex items-center gap-3"
             whileHover={{ scale: 1.05 }}
           >
-            <div className="w-10 h-10 bg-gradient-primary rounded-lg flex items-center justify-center portal-effect">
-              <Zap size={24} className="text-primary-foreground" />
-            </div>
+            <img 
+              src={cortexLogo} 
+              alt="CORTEX Logo" 
+              className="w-14 h-14 sm:w-16 sm:h-16 object-contain"
+            />
             <div>
               <h1 className="font-orbitron font-bold text-xl bg-gradient-primary bg-clip-text text-transparent">
                 CORTEX

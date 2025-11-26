@@ -36,13 +36,14 @@ import {
 import 'katex/dist/katex.min.css';
 import { InlineMath, BlockMath } from 'react-katex';
 import { useConversationAudio } from '@/hooks/useConversationAudio';
+import { analyzeAreasForImprovement, analyzeStrengths, analyzeCommonMistakes } from '@/utils/progressAnalysis';
 
 const mercuryBg = new URL('../../planet background/mercury.webp', import.meta.url).href;
 
 const MercuryLesson: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { saveProgress, awardXP, saveAchievement } = usePlayer();
+  const { saveProgress, awardXP, saveAchievement, completeLesson } = usePlayer();
   const { toast } = useToast();
   const { playAudio: playConversationAudio } = useConversationAudio();
   const [currentSection, setCurrentSection] = useState(0);
@@ -91,6 +92,9 @@ const MercuryLesson: React.FC = () => {
   const [showQuestionFeedback, setShowQuestionFeedback] = useState<Record<number, boolean>>({});
   const [quizCompleted, setQuizCompleted] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const startRef = useRef<number>(Date.now());
+  
+  useEffect(() => { startRef.current = Date.now(); }, []);
 
   const handleQuizAnswer = (questionId: number, selectedAnswer: string, correctAnswer: string, explanation: string) => {
     const isCorrect = selectedAnswer === correctAnswer;
@@ -109,13 +113,17 @@ const MercuryLesson: React.FC = () => {
       [questionId]: true
     }));
 
+    // Track equationsSolved and mistakes with meaningful descriptions
     if (isCorrect) {
+      setEquationsSolved(prev => [...prev, `Rational Equations Intro: Question ${questionId} - Correctly answered`]);
       toast({
         title: "Correct! 🎉",
         description: "Great job! You understand this concept.",
         variant: "default",
       });
     } else {
+      const mistakeDescription = `Rational Equations Intro: Question ${questionId} - ${explanation || 'Incorrect answer. Need to review rational equation concepts'}`;
+      setMistakes(prev => [...prev, mistakeDescription]);
       toast({
         title: "Not quite right 📚",
         description: "Check the explanation below to learn more.",
@@ -972,36 +980,89 @@ const MercuryLesson: React.FC = () => {
   };
 
   const handleFinishLesson = async () => {
-    // Award XP for completing the Mercury lesson
-    awardXP(200, 'mercury-lesson-completed');
+    if (!user?.id) {
+      toast({
+        title: "Please Log In",
+        description: "You need to be logged in to save your progress.",
+        variant: "destructive",
+      });
+      return;
+    }
     
-    // Save achievement
-    if (user?.id) {
-      saveAchievement({
-        userId: user.id,
+    try {
+      // Calculate skill breakdown from quiz answers
+      const answers = Object.values(questionsAnswered);
+      const totalQuestions = answers.length;
+      const correctAnswers = answers.filter(a => a.correct).length;
+      const performance = getPerformanceSummary();
+      
+      // Calculate skill breakdown for Rational Equations Intro
+      const skillBreakdown = {
+        restrictions: {
+          correct: 0,
+          total: 0
+        },
+        lcdFinding: {
+          correct: 0,
+          total: 0
+        },
+        solvingProcess: {
+          correct: correctAnswers,
+          total: totalQuestions
+        },
+        extraneousSolutions: {
+          correct: 0,
+          total: 0
+        },
+        factoring: {
+          correct: 0,
+          total: 0
+        },
+        algebra: {
+          correct: correctAnswers,
+          total: totalQuestions
+        }
+      };
+      
+      // Use the optimized lesson completion function
+      const success = await completeLesson(user.id, {
         lessonId: 'mercury-lesson',
         lessonName: 'Mercury: Intro to Rational Equations',
-        lessonType: 'solar-system',
+        score: performance.total > 0 ? performance.percentage : 100,
+        timeSpent: Math.max(1, Math.round((Date.now() - startRef.current) / 60000)),
+        equationsSolved,
+        mistakes,
+        skillBreakdown: skillBreakdown,
         xpEarned: 200,
         planetName: 'Mercury',
       });
-    }
-    
-    // Save current lesson (Mercury) as completed
-    await saveProgress(user.id, { module_id: 'mercury', section_id: 'section_0', slide_index: sections.length - 1, progress_pct: 100 });
-    
-    // Also save progress for next planet (Venus) so it shows up in "In Progress"
-    if (user?.id) {
+      
+      if (success) {
+        toast({
+          title: "Lesson Complete! 🎉",
+          description: "Your progress has been saved successfully.",
+        });
+      }
+      
+      // Also save progress for next planet (Venus) so it shows up in "In Progress"
       await saveProgress(user.id, {
         module_id: 'venus',
         section_id: 'section_0',
         slide_index: 0,
         progress_pct: 0, // Starting fresh on next lesson
       });
+      
+      // Show completion dialog instead of navigating directly
+      setShowCompletionDialog(true);
+    } catch (error) {
+      console.error('Error completing lesson:', error);
+      toast({
+        title: "Lesson Completed",
+        description: "Lesson finished, but there was an issue saving progress.",
+        variant: "destructive",
+      });
+      setShowCompletionDialog(true);
     }
-    
-    // Show completion dialog instead of navigating directly
-    setShowCompletionDialog(true);
   };
 
   const handleContinueToNext = () => {

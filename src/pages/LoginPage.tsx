@@ -22,8 +22,8 @@ import {
   Calculator,
   UserPlus
 } from 'lucide-react';
-import cosmicBackground from '@/assets/cosmic-background.png';
 import { getDbConfig } from '../lib/database';
+import cortexLogo from '@/cortex  logo.png';
 
 const LoginPage: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -62,7 +62,7 @@ const LoginPage: React.FC = () => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Initializing Math Cosmos Tutor...</p>
+          <p className="text-muted-foreground">Initializing CORTEX...</p>
         </div>
       </div>
     );
@@ -167,10 +167,10 @@ const LoginPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
       <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-30"
-        style={{ backgroundImage: `url(${cosmicBackground})` }}
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-50"
+        style={{ backgroundImage: `url('/login page pic.jpg')` }}
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-background/50 via-background/80 to-background" />
+      <div className="absolute inset-0 bg-gradient-to-b from-background/25 via-background/45 to-background/65" />
 
       <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
         <motion.div
@@ -181,26 +181,47 @@ const LoginPage: React.FC = () => {
         >
           <div className="text-center mb-8">
             <motion.div
-              initial={{ scale: 0.8 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.2, type: "spring" }}
-              className="inline-flex items-center justify-center w-20 h-20 bg-gradient-primary rounded-full mb-4"
+              initial={{ scale: 0.8, rotate: -180 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+              className="inline-flex items-center justify-center mb-4 relative"
             >
-              <Calculator size={40} className="text-primary-foreground" />
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                className="absolute inset-0 rounded-full border-2 border-cyan-400/30"
+                style={{ width: '200px', height: '200px', margin: '0 auto' }}
+              />
+              <img 
+                src={cortexLogo} 
+                alt="CORTEX Logo" 
+                className="w-48 h-48 md:w-56 md:h-56 relative z-10 drop-shadow-2xl"
+                style={{
+                  filter: 'drop-shadow(0 0 20px rgba(139, 92, 246, 0.6)) drop-shadow(0 0 40px rgba(236, 72, 153, 0.4))'
+                }}
+              />
             </motion.div>
-            <h1 className="font-orbitron font-bold text-3xl bg-gradient-primary bg-clip-text text-transparent mb-2">
-              Math Cosmos Tutor
-            </h1>
-            <p className="text-muted-foreground">
-              Explore the universe of mathematics
-            </p>
+            <motion.p 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.6 }}
+              className="text-cyan-300/80 font-medium text-sm tracking-wider uppercase"
+              style={{ textShadow: '0 0 10px rgba(96, 165, 250, 0.5)' }}
+            >
+              // Neural Interface Activated //
+            </motion.p>
           </div>
 
           {/* Quick Access: Guest only (no codes) */}
-          <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-6">
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <div className="text-sm font-medium text-card-foreground">Quick Access</div>
-              <div className="text-xs text-muted-foreground">No account needed</div>
+          <div className="relative bg-black/30 backdrop-blur-sm border-2 border-cyan-500/30 rounded-lg p-4 mb-6 overflow-hidden"
+            style={{
+              boxShadow: '0 0 20px rgba(96, 165, 250, 0.2), inset 0 0 20px rgba(59, 130, 246, 0.1)'
+            }}
+          >
+            <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
+            <div className="flex items-center justify-between gap-2 mb-3 relative z-10">
+              <div className="text-sm font-orbitron font-bold text-cyan-300">[ QUICK ACCESS ]</div>
+              <div className="text-xs text-cyan-500/70 font-mono">[ No account ]</div>
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
               <div className="flex-1 flex gap-2">
@@ -208,6 +229,7 @@ const LoginPage: React.FC = () => {
                   placeholder="Enter name (optional)"
                   value={guestName}
                   onChange={(e) => setGuestName(e.target.value)}
+                  className="bg-black/40 border-cyan-500/30 focus:border-cyan-400 focus:ring-cyan-400/50 text-cyan-50 placeholder:text-cyan-500/50 font-mono"
                 />
                 <Button
                   variant="outline"
@@ -215,10 +237,13 @@ const LoginPage: React.FC = () => {
                     await guestLoginLocal(guestName);
                     navigate('/student');
                   }}
-                  className="whitespace-nowrap"
+                  className="whitespace-nowrap border-cyan-500/50 text-cyan-300 hover:bg-cyan-500/20 hover:border-cyan-400 font-mono"
+                  style={{
+                    boxShadow: '0 0 10px rgba(96, 165, 250, 0.3)'
+                  }}
                 >
                   <UserPlus className="w-4 h-4 mr-1" />
-                  Continue as Guest
+                  Guest Mode
                 </Button>
               </div>
             </div>
@@ -258,16 +283,28 @@ const LoginPage: React.FC = () => {
             )}
           </div>
 
-          <Card className="bg-gradient-card border-primary/30 backdrop-blur-sm">
-            <CardHeader className="text-center pb-4">
-              <CardTitle className="font-orbitron text-xl text-card-foreground">
-                {isLogin ? 'Welcome Back' : 'Join the Journey'}
+          <Card className="relative bg-black/40 backdrop-blur-md border-2 overflow-hidden"
+            style={{
+              borderImage: 'linear-gradient(135deg, rgba(139, 92, 246, 0.8), rgba(236, 72, 153, 0.8), rgba(59, 130, 246, 0.8)) 1',
+              boxShadow: '0 0 30px rgba(139, 92, 246, 0.3), 0 0 60px rgba(236, 72, 153, 0.2), inset 0 0 40px rgba(59, 130, 246, 0.1)'
+            }}
+          >
+            {/* Animated border glow */}
+            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-pink-500/20 opacity-50 animate-pulse" />
+            <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-60" />
+            <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-pink-400 to-transparent opacity-60" />
+            
+            <CardHeader className="text-center pb-4 relative z-10 border-b border-cyan-500/20">
+              <CardTitle className="font-orbitron text-2xl text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 mb-2"
+                style={{ textShadow: '0 0 15px rgba(139, 92, 246, 0.5)' }}
+              >
+                {isLogin ? '> SYSTEM ACCESS <' : '> NEW USER INITIALIZATION <'}
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
-                {isLogin ? 'Sign in to continue your learning adventure' : 'Create your account to start exploring'}
+              <p className="text-sm text-cyan-300/70 font-mono">
+                {isLogin ? '[ Authenticate to proceed ]' : '[ Register new identity ]'}
               </p>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 relative z-10">
               {/* Debug info */}
               <div className="text-xs text-muted-foreground text-center">
                 Debug: AuthLoading={authLoading ? 'true' : 'false'}, User={user ? user.username : 'null'}
@@ -298,8 +335,8 @@ const LoginPage: React.FC = () => {
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="username" className="text-sm font-medium">
-                    Username
+                  <Label htmlFor="username" className="text-sm font-mono text-cyan-300/80 flex items-center gap-2">
+                    <span className="text-cyan-500">/</span> Username
                   </Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={16} />
@@ -309,7 +346,7 @@ const LoginPage: React.FC = () => {
                       placeholder="Enter your username"
                       value={formData.username}
                       onChange={(e) => handleInputChange('username', e.target.value)}
-                      className="pl-10"
+                      className="pl-10 bg-black/40 border-cyan-500/30 focus:border-cyan-400 focus:ring-cyan-400/50 text-cyan-50 placeholder:text-cyan-500/50 font-mono"
                       required
                     />
                   </div>
@@ -317,8 +354,8 @@ const LoginPage: React.FC = () => {
 
                 {!isLogin && (
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="text-sm font-medium">
-                      Email
+                    <Label htmlFor="email" className="text-sm font-mono text-cyan-300/80 flex items-center gap-2">
+                      <span className="text-cyan-500">/</span> Email
                     </Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={16} />
@@ -328,7 +365,7 @@ const LoginPage: React.FC = () => {
                         placeholder="Enter your email"
                         value={formData.email}
                         onChange={(e) => handleInputChange('email', e.target.value)}
-                        className="pl-10"
+                        className="pl-10 bg-black/40 border-cyan-500/30 focus:border-cyan-400 focus:ring-cyan-400/50 text-cyan-50 placeholder:text-cyan-500/50 font-mono"
                         required
                       />
                     </div>
@@ -336,8 +373,8 @@ const LoginPage: React.FC = () => {
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-sm font-medium">
-                    Password
+                  <Label htmlFor="password" className="text-sm font-mono text-cyan-300/80 flex items-center gap-2">
+                    <span className="text-cyan-500">/</span> Password
                   </Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={16} />
@@ -347,7 +384,7 @@ const LoginPage: React.FC = () => {
                       placeholder="Enter your password"
                       value={formData.password}
                       onChange={(e) => handleInputChange('password', e.target.value)}
-                      className="pl-10 pr-10"
+                      className="pl-10 pr-10 bg-black/40 border-cyan-500/30 focus:border-cyan-400 focus:ring-cyan-400/50 text-cyan-50 placeholder:text-cyan-500/50 font-mono"
                       required
                     />
                     <Button
@@ -364,7 +401,9 @@ const LoginPage: React.FC = () => {
 
                 {!isLogin && (
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium">I am a:</Label>
+                    <Label className="text-sm font-mono text-cyan-300/80 flex items-center gap-2">
+                      <span className="text-cyan-500">/</span> I am a:
+                    </Label>
                     <RadioGroup value={role} onValueChange={(value: 'student' | 'teacher') => setRole(value)}>
                       <div className="grid grid-cols-2 gap-3">
                         <Label
@@ -394,35 +433,49 @@ const LoginPage: React.FC = () => {
 
                 <Button
                   type="submit"
-                  className="w-full bg-gradient-primary hover:bg-gradient-primary/90"
+                  className="w-full relative overflow-hidden font-orbitron font-bold text-lg py-6 transition-all duration-300"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.8), rgba(236, 72, 153, 0.8))',
+                    border: '2px solid transparent',
+                    borderImage: 'linear-gradient(135deg, rgba(96, 165, 250, 0.8), rgba(236, 72, 153, 0.8)) 1',
+                    boxShadow: '0 0 20px rgba(139, 92, 246, 0.5), inset 0 0 20px rgba(255, 255, 255, 0.1)'
+                  }}
                   disabled={isLoading}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 0 30px rgba(139, 92, 246, 0.8), 0 0 50px rgba(236, 72, 153, 0.6), inset 0 0 20px rgba(255, 255, 255, 0.2)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 0 20px rgba(139, 92, 246, 0.5), inset 0 0 20px rgba(255, 255, 255, 0.1)';
+                  }}
                 >
+                  <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/0 via-white/20 to-cyan-500/0 translate-x-[-100%] hover:translate-x-[100%] transition-transform duration-1000" />
                   {isLoading ? (
                     <motion.div
                       animate={{ rotate: 360 }}
                       transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      className="relative z-10"
                     >
-                      <Sparkles size={16} />
+                      <Sparkles size={20} className="text-white" />
                     </motion.div>
                   ) : (
-                    <>
-                      {isLogin ? 'Sign In' : 'Create Account'}
-                      <Rocket size={16} className="ml-2" />
-                    </>
+                    <span className="relative z-10 flex items-center justify-center gap-2">
+                      {isLogin ? '> ACCESS GRANTED <' : '> INITIALIZE <'}
+                      <Rocket size={18} />
+                    </span>
                   )}
                 </Button>
               </form>
 
-              <div className="text-center">
+              <div className="text-center relative z-10">
                 <Button
                   variant="link"
-                  className="text-sm text-muted-foreground hover:text-primary"
+                  className="text-sm text-cyan-400/70 hover:text-cyan-300 font-mono transition-all"
                   onClick={() => {
                     setIsLogin(!isLogin);
                     setFormData({ username: '', email: '', password: '' });
                   }}
                 >
-                  {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
+                  {isLogin ? "[ New user? Register ]" : "[ Existing user? Login ]"}
                 </Button>
               </div>
             </CardContent>

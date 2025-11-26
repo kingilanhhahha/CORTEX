@@ -24,6 +24,7 @@ import {
 import 'katex/dist/katex.min.css';
 import { InlineMath, BlockMath } from 'react-katex';
 import { useRef, useEffect } from 'react';
+import { analyzeAreasForImprovement, analyzeStrengths, analyzeCommonMistakes } from '@/utils/progressAnalysis';
 const venusBg = new URL('../../planet background/SATURN.jpeg', import.meta.url).href;
 
 const VenusLesson: React.FC = () => {
@@ -60,13 +61,27 @@ const VenusLesson: React.FC = () => {
       [questionId]: true
     }));
 
+    // Track equationsSolved and mistakes with meaningful descriptions
     if (isCorrect) {
+      setEquationsSolved(prev => [...prev, `LCD Finding: Question ${questionId} - Correctly found LCD`]);
       toast({
         title: "Correct! 🎉",
         description: "Great job! You understand this concept.",
         variant: "default",
       });
     } else {
+      // Create meaningful mistake descriptions that analysis functions can detect
+      let mistakeDescription = '';
+      if (questionId === 1) {
+        mistakeDescription = `LCD Finding: Incorrect LCD for fractions with denominators x and 3x. ${explanation || 'Need to find least common denominator'}`;
+      } else if (questionId === 2) {
+        mistakeDescription = `LCD Finding: Incorrect LCD for quadratic denominators. ${explanation || 'Need to factor and find LCD'}`;
+      } else if (questionId === 3) {
+        mistakeDescription = `LCD Finding: Incorrect LCD for fractions with powers. ${explanation || 'Need to consider highest power in denominators'}`;
+      } else {
+        mistakeDescription = `LCD Finding: Question ${questionId} - ${explanation || 'Incorrect answer'}`;
+      }
+      setMistakes(prev => [...prev, mistakeDescription]);
       toast({
         title: "Not quite right 📚",
         description: "Check the explanation below to learn more.",
@@ -683,10 +698,58 @@ const VenusLesson: React.FC = () => {
   };
 
   const handleFinishLesson = async () => {
+    if (!user?.id) {
+      toast({
+        title: "Please Log In",
+        description: "You need to be logged in to save your progress.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     try {
       // Get performance summary with safety checks
       const performance = getPerformanceSummary();
       const score = performance.total > 0 ? performance.percentage : 100; // Default to 100% if no questions
+      
+      // Calculate skill breakdown from quiz answers
+      const answers = Object.values(questionsAnswered);
+      const totalQuestions = answers.length;
+      const correctAnswers = answers.filter(a => a.correct).length;
+      
+      // Calculate skill breakdown for LCD Finding (main skill for Venus lesson)
+      const lcdCorrect = answers.filter(a => a.correct).length;
+      const skillBreakdown = {
+        lcdFinding: {
+          correct: lcdCorrect,
+          total: totalQuestions
+        },
+        restrictions: {
+          correct: 0,
+          total: 0
+        },
+        solvingProcess: {
+          correct: 0,
+          total: 0
+        },
+        extraneousSolutions: {
+          correct: 0,
+          total: 0
+        },
+        factoring: {
+          correct: 0,
+          total: 0
+        },
+        algebra: {
+          correct: 0,
+          total: 0
+        }
+      };
+      
+      // Analyze areas for improvement, strengths, and common mistakes
+      const areasForImprovement = analyzeAreasForImprovement(mistakes);
+      const strengths = analyzeStrengths(equationsSolved);
+      const commonMistakes = analyzeCommonMistakes(mistakes);
       
       // Use the optimized lesson completion function
       const success = await completeLesson(user.id, {
@@ -696,7 +759,7 @@ const VenusLesson: React.FC = () => {
         timeSpent: Math.max(1, Math.round((Date.now() - startRef.current) / 60000)),
         equationsSolved,
         mistakes,
-        skillBreakdown: {},
+        skillBreakdown: skillBreakdown,
         xpEarned: 150,
         planetName: 'Venus',
       });
